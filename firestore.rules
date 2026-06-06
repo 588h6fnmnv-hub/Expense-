@@ -1,0 +1,149 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+
+    function memberPath(companyId) {
+      return /databases/$(database)/documents/companies/$(companyId)/members/$(email());
+    }
+
+    function isMember(companyId) {
+      return signedIn() && exists(memberPath(companyId));
+    }
+
+    function member(companyId) {
+      return get(memberPath(companyId)).data;
+    }
+
+    function role(companyId) {
+      return isMember(companyId) ? member(companyId).role : null;
+    }
+
+    function ownerOrAdmin(companyId) {
+      return role(companyId) in ['owner', 'admin'];
+    }
+
+    function fullDataRole(companyId) {
+      return role(companyId) in ['owner', 'admin', 'manager', 'accountant'];
+    }
+
+    function supervisor(companyId) {
+      return role(companyId) == 'supervisor';
+    }
+
+    function worker(companyId) {
+      return role(companyId) == 'worker';
+    }
+
+    function viewer(companyId) {
+      return role(companyId) == 'viewer';
+    }
+
+    function sameCompany(companyId) {
+      return request.resource.data.companyId == companyId;
+    }
+
+    function hasAssignedProjects(companyId) {
+      return member(companyId).assignedProjectIds is list;
+    }
+
+    function hasAssignedWorkers(companyId) {
+      return member(companyId).assignedWorkerIds is list;
+    }
+
+    function assignedProject(companyId, projectId) {
+      return hasAssignedProjects(companyId) && projectId is string && projectId in member(companyId).assignedProjectIds;
+    }
+
+    function assignedWorker(companyId, workerId) {
+      return hasAssignedWorkers(companyId) && workerId is string && workerId in member(companyId).assignedWorkerIds;
+    }
+
+    function canReadProjectDoc(companyId) {
+      return fullDataRole(companyId)
+        || ((supervisor(companyId) || viewer(companyId)) && assignedProject(companyId, resource.data.projectId));
+    }
+
+    function canReadProjectOrWorkerDoc(companyId) {
+      return fullDataRole(companyId)
+        || ((supervisor(companyId) || viewer(companyId)) && assignedProject(companyId, resource.data.projectId))
+        || (worker(companyId) && assignedWorker(companyId, resource.data.workerId));
+    }
+
+    match /companies/{companyId} {
+      allow read: if isMember(companyId);
+      allow create, update, delete: if ownerOrAdmin(companyId);
+
+      match /members/{memberId} {
+        allow read: if ownerOrAdmin(companyId) || memberId == email();
+        allow write: if ownerOrAdmin(companyId);
+      }
+
+      match /transactions/{docId} {
+        allow read: if canReadProjectDoc(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /sites/{docId} {
+        allow read: if fullDataRole(companyId)
+          || ((supervisor(companyId) || worker(companyId) || viewer(companyId)) && assignedProject(companyId, docId));
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /workers/{docId} {
+        allow read: if fullDataRole(companyId)
+          || (supervisor(companyId) && (assignedWorker(companyId, docId) || assignedProject(companyId, resource.data.projectId)))
+          || (worker(companyId) && assignedWorker(companyId, docId));
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /materials/{docId} {
+        allow read: if canReadProjectDoc(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /bills/{docId} {
+        allow read: if canReadProjectDoc(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /reminders/{docId} {
+        allow read: if fullDataRole(companyId)
+          || ((supervisor(companyId) || viewer(companyId) || worker(companyId)) && assignedProject(companyId, resource.data.projectId));
+        allow write: if sameCompany(companyId)
+          && (fullDataRole(companyId)
+            || ((supervisor(companyId) || worker(companyId)) && assignedProject(companyId, request.resource.data.projectId)));
+      }
+
+      match /dailyReports/{docId} {
+        allow read: if canReadProjectOrWorkerDoc(companyId);
+        allow create, update: if sameCompany(companyId)
+          && (fullDataRole(companyId)
+            || (supervisor(companyId) && assignedProject(companyId, request.resource.data.projectId))
+            || (worker(companyId) && assignedWorker(companyId, request.resource.data.workerId)));
+        allow delete: if ownerOrAdmin(companyId);
+      }
+
+      match /invites/{inviteId} {
+        allow read: if ownerOrAdmin(companyId);
+        allow create, update, delete: if ownerOrAdmin(companyId);
+      }
+
+      match /auditLogs/{docId} {
+        allow read: if ownerOrAdmin(companyId);
+        allow create: if isMember(companyId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /wallets/{walletId} {
+      allow read, write: if signedIn() && walletId == email();
+    }
+  }
+}
