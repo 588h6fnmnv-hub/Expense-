@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const whatsappMessage =
   "Hi, I want to see a Ledge demo for my construction business.";
 
@@ -20,9 +22,9 @@ export default function DemoLandingPage() {
     <main className="min-h-dvh bg-[#f7f8f5] text-neutral-950">
       <section className="mx-auto grid min-h-dvh max-w-6xl gap-8 px-5 pb-12 pt-5 md:grid-cols-[1fr_420px] md:items-center md:pt-8">
         <div className="flex flex-col justify-center">
-          <a href="/" className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+          <Link href="/" className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
             Open Ledge
-          </a>
+          </Link>
           <h1 className="mt-8 max-w-2xl text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
             Ledge
           </h1>
@@ -39,12 +41,12 @@ export default function DemoLandingPage() {
             >
               Request Demo on WhatsApp
             </a>
-            <a
+            <Link
               href="/"
               className="rounded-3xl border border-neutral-300 bg-white px-6 py-4 text-center font-black active:scale-[0.98]"
             >
               Open Demo Company
-            </a>
+            </Link>
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2">

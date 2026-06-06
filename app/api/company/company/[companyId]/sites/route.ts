@@ -8,22 +8,24 @@ export const runtime = "nodejs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  context: { params: Promise<{ companyId: string }> }
 ) {
+  const { companyId } = await context.params;
   return listCompanyCollection({
     request,
-    companyId: params.companyId,
+    companyId,
     collectionName: "sites",
   });
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  context: { params: Promise<{ companyId: string }> }
 ) {
+  const { companyId } = await context.params;
   return createCompanyCollectionDocument({
     request,
-    companyId: params.companyId,
+    companyId,
     collectionName: "sites",
   });
 }
