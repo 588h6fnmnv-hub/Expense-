@@ -86,6 +86,12 @@ import {
   Transaction,
   TransactionType,
   WalletData,
+  Customer,
+  Supplier,
+  Invoice,
+  SupplierBill,
+  Attendance,
+  PayrollRun,
 } from "@/lib/types";
 
 const expenseCategories = [
@@ -1966,10 +1972,10 @@ export default function Home() {
   const [dailyReports, setDailyReports] = useState<DailyWorkReport[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [supplierBills, setSupplierBills] = useState<SupplierBill[]>([]);
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
+  const [invoices] = useState<Invoice[]>([]);
+  const [supplierBills] = useState<SupplierBill[]>([]);
+  const [attendance] = useState<Attendance[]>([]);
+  const [payrollRuns] = useState<PayrollRun[]>([]);
   const [accountBalances, setAccountBalances] = useState<AccountBalances>(
     emptyAccountBalances()
   );
@@ -2868,7 +2874,7 @@ export default function Home() {
       setWalletReady(true);
       setStorageStatus("local");
       setTab(finalRole === "worker" ? "People" : "Sites");
-    } catch (e) {
+    } catch {
       setLoginError("Invite acceptance failed.");
       return;
     }
