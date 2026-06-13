@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         before: null,
         after: { members: members.length },
       });
-    } catch {
+    } catch (e) {
       // best-effort
     }
 

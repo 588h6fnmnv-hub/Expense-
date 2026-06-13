@@ -2859,7 +2859,7 @@ export default function Home() {
       setWalletReady(true);
       setStorageStatus("local");
       setTab(finalRole === "worker" ? "Workers" : "Sites");
-  } catch {
+    } catch (e) {
       setLoginError("Invite acceptance failed.");
       return;
     }
