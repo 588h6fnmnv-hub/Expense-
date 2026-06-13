@@ -28,10 +28,12 @@ export const firebaseApp = isFirebaseConfigured
     : initializeApp(firebaseConfig)
   : null;
 
-const firestoreDatabaseId = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID || "default";
+const firestoreDatabaseId = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID || "(default)";
 
 export const firebaseDb = firebaseApp
-  ? getFirestore(firebaseApp, firestoreDatabaseId)
+  ? firestoreDatabaseId === "(default)"
+    ? getFirestore(firebaseApp)
+    : getFirestore(firebaseApp, firestoreDatabaseId)
   : null;
 
 const walletDocId = (email: string) => encodeURIComponent(email.toLowerCase());
