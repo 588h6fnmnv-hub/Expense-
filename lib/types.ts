@@ -395,3 +395,170 @@ export type Payroll = {
   note?: string;
   createdAt?: unknown;
 };
+
+export type AccountType =
+  | "Asset"
+  | "Liability"
+  | "Equity"
+  | "Income"
+  | "Expense";
+
+export type Account = {
+  id: string;
+  companyId: string;
+  name: string;
+  type: AccountType;
+  parentAccount?: string;
+  code?: string;
+  isGroup: boolean;
+  balance: number;
+  createdAt?: unknown;
+};
+
+export type JournalEntryLine = {
+  accountId: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  note?: string;
+};
+
+export type JournalEntry = {
+  id: string;
+  companyId: string;
+  date: string;
+  reference?: string;
+  notes?: string;
+  lines: JournalEntryLine[];
+  sourceType?: string;
+  sourceId?: string;
+  createdBy: string;
+  createdAt?: unknown;
+};
+
+export type LedgerEntry = {
+  id: string;
+  companyId: string;
+  accountId: string;
+  date: string;
+  journalEntryId: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  note?: string;
+  siteId?: string;
+  createdAt?: unknown;
+};
+
+export type Customer = {
+  id: string;
+  companyId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  gstin?: string;
+  balance: number;
+  createdAt?: unknown;
+};
+
+export type Supplier = {
+  id: string;
+  companyId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  gstin?: string;
+  balance: number;
+  createdAt?: unknown;
+};
+
+export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue" | "Cancelled";
+
+export type InvoiceItem = {
+  description: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  taxRate?: number;
+  taxAmount?: number;
+};
+
+export type Invoice = {
+  id: string;
+  companyId: string;
+  customerId: string;
+  customerName: string;
+  date: string;
+  dueDate: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+  status: InvoiceStatus;
+  siteId?: string;
+  note?: string;
+  createdAt?: unknown;
+};
+
+export type SupplierBillStatus = "Pending" | "Paid" | "Cancelled";
+
+export type SupplierBill = {
+  id: string;
+  companyId: string;
+  supplierId: string;
+  supplierName: string;
+  date: string;
+  dueDate: string;
+  reference?: string;
+  items: InvoiceItem[];
+  total: number;
+  status: SupplierBillStatus;
+  siteId?: string;
+  note?: string;
+  createdAt?: unknown;
+};
+
+export type PurchaseOrderStatus = "Draft" | "Ordered" | "Received" | "Cancelled";
+
+export type PurchaseOrder = {
+  id: string;
+  companyId: string;
+  supplierId: string;
+  date: string;
+  items: InvoiceItem[];
+  total: number;
+  status: PurchaseOrderStatus;
+  siteId?: string;
+  note?: string;
+  createdAt?: unknown;
+};
+
+export type AttendanceStatus = "Present" | "Absent" | "Half Day" | "Leave";
+
+export type Attendance = {
+  id: string;
+  companyId: string;
+  workerId: string;
+  workerName: string;
+  date: string;
+  status: AttendanceStatus;
+  siteId?: string;
+  note?: string;
+  createdAt?: unknown;
+};
+
+export type PayrollRun = {
+  id: string;
+  companyId: string;
+  workerId: string;
+  periodStart: string;
+  periodEnd: string;
+  basicWage: number;
+  allowances: number;
+  deductions: number;
+  netPay: number;
+  status: "Draft" | "Approved" | "Paid";
+  createdAt?: unknown;
+};

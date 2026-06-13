@@ -13,7 +13,17 @@ export type CompanyCollectionName =
   | "materials"
   | "bills"
   | "reminders"
-  | "dailyReports";
+  | "dailyReports"
+  | "accounts"
+  | "journal"
+  | "ledger"
+  | "customers"
+  | "suppliers"
+  | "invoices"
+  | "supplierBills"
+  | "purchaseOrders"
+  | "attendance"
+  | "payrollRuns";
 
 export const companyCollectionNames: CompanyCollectionName[] = [
   "transactions",
@@ -23,6 +33,16 @@ export const companyCollectionNames: CompanyCollectionName[] = [
   "bills",
   "reminders",
   "dailyReports",
+  "accounts",
+  "journal",
+  "ledger",
+  "customers",
+  "suppliers",
+  "invoices",
+  "supplierBills",
+  "purchaseOrders",
+  "attendance",
+  "payrollRuns",
 ];
 
 export const isCompanyCollectionName = (
@@ -181,6 +201,23 @@ export const sanitizeCompanyDocumentPayload = ({
     note: cleanOptionalString(raw.note, 1000),
   };
 
+  const sanitizeInvoiceItems = (items: unknown) =>
+    Array.isArray(items)
+      ? items
+          .map((item) => {
+            if (!isPlainObject(item)) return null;
+            return {
+              description: cleanString(item.description, 500),
+              quantity: cleanNumber(item.quantity),
+              rate: cleanNumber(item.rate),
+              amount: cleanNumber(item.amount),
+              taxRate: cleanNumber(item.taxRate),
+              taxAmount: cleanNumber(item.taxAmount),
+            };
+          })
+          .filter(Boolean)
+      : [];
+
   switch (collectionName) {
     case "transactions": {
       const title = cleanString(raw.title, 240) || "Untitled transaction";
@@ -317,6 +354,110 @@ export const sanitizeCompanyDocumentPayload = ({
         notificationReady: cleanBoolean(raw.notificationReady),
       };
     }
+    case "accounts":
+      return {
+        ...common,
+        name: cleanString(raw.name, 240),
+        type: cleanString(raw.type, 40),
+        parentAccount: cleanOptionalString(raw.parentAccount, 160),
+        code: cleanOptionalString(raw.code, 40),
+        isGroup: cleanBoolean(raw.isGroup),
+        balance: cleanNumber(raw.balance),
+      };
+    case "journal":
+      return {
+        ...common,
+        date: cleanString(raw.date, 40) || new Date().toISOString().slice(0, 10),
+        reference: cleanOptionalString(raw.reference, 160),
+        notes: cleanOptionalString(raw.notes, 1000),
+        lines: Array.isArray(raw.lines)
+          ? raw.lines
+              .map((line) => {
+                if (!isPlainObject(line)) return null;
+                return {
+                  accountId: cleanString(line.accountId, 160),
+                  accountName: cleanString(line.accountName, 240),
+                  debit: cleanNumber(line.debit),
+                  credit: cleanNumber(line.credit),
+                  note: cleanOptionalString(line.note, 500),
+                };
+              })
+              .filter(Boolean)
+          : [],
+        sourceType: cleanOptionalString(raw.sourceType, 80),
+        sourceId: cleanOptionalString(raw.sourceId, 160),
+      };
+    case "ledger":
+      return {
+        ...common,
+        accountId: cleanString(raw.accountId, 160),
+        date: cleanString(raw.date, 40) || new Date().toISOString().slice(0, 10),
+        journalEntryId: cleanString(raw.journalEntryId, 160),
+        debit: cleanNumber(raw.debit),
+        credit: cleanNumber(raw.credit),
+        balance: cleanNumber(raw.balance),
+        siteId: cleanOptionalString(raw.siteId, 160),
+      };
+    case "customers":
+    case "suppliers":
+      return {
+        ...common,
+        name: cleanString(raw.name, 240),
+        email: cleanOptionalString(raw.email, 240),
+        phone: cleanOptionalString(raw.phone, 40),
+        address: cleanOptionalString(raw.address, 500),
+        gstin: cleanOptionalString(raw.gstin, 80),
+        balance: cleanNumber(raw.balance),
+      };
+    case "invoices":
+    case "supplierBills":
+      return {
+        ...common,
+        customerId: cleanOptionalString(raw.customerId, 160),
+        supplierId: cleanOptionalString(raw.supplierId, 160),
+        customerName: cleanOptionalString(raw.customerName, 240),
+        supplierName: cleanOptionalString(raw.supplierName, 240),
+        date: cleanString(raw.date, 40) || new Date().toISOString().slice(0, 10),
+        dueDate: cleanString(raw.dueDate, 40),
+        reference: cleanOptionalString(raw.reference, 160),
+        items: sanitizeInvoiceItems(raw.items),
+        subtotal: cleanNumber(raw.subtotal),
+        taxTotal: cleanNumber(raw.taxTotal),
+        total: cleanNumber(raw.total),
+        status: cleanString(raw.status, 40),
+        siteId: cleanOptionalString(raw.siteId, 160),
+      };
+    case "purchaseOrders":
+      return {
+        ...common,
+        supplierId: cleanString(raw.supplierId, 160),
+        date: cleanString(raw.date, 40) || new Date().toISOString().slice(0, 10),
+        items: sanitizeInvoiceItems(raw.items),
+        total: cleanNumber(raw.total),
+        status: cleanString(raw.status, 40),
+        siteId: cleanOptionalString(raw.siteId, 160),
+      };
+    case "attendance":
+      return {
+        ...common,
+        workerId: cleanString(raw.workerId, 160),
+        workerName: cleanString(raw.workerName, 240),
+        date: cleanString(raw.date, 40) || new Date().toISOString().slice(0, 10),
+        status: cleanString(raw.status, 40),
+        siteId: cleanOptionalString(raw.siteId, 160),
+      };
+    case "payrollRuns":
+      return {
+        ...common,
+        workerId: cleanString(raw.workerId, 160),
+        periodStart: cleanString(raw.periodStart, 40),
+        periodEnd: cleanString(raw.periodEnd, 40),
+        basicWage: cleanNumber(raw.basicWage),
+        allowances: cleanNumber(raw.allowances),
+        deductions: cleanNumber(raw.deductions),
+        netPay: cleanNumber(raw.netPay),
+        status: cleanString(raw.status, 40),
+      };
     default:
       return raw;
   }

@@ -130,6 +130,61 @@ service cloud.firestore {
         allow delete: if ownerOrAdmin(companyId);
       }
 
+      match /accounts/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if ownerOrAdmin(companyId) && sameCompany(companyId);
+      }
+
+      match /journal/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /ledger/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /customers/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /suppliers/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /invoices/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /supplierBills/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /purchaseOrders/{docId} {
+        allow read: if fullDataRole(companyId);
+        allow write: if fullDataRole(companyId) && sameCompany(companyId);
+      }
+
+      match /attendance/{docId} {
+        allow read: if fullDataRole(companyId)
+          || (supervisor(companyId) && assignedProject(companyId, resource.data.siteId))
+          || (worker(companyId) && resource.data.workerId == member(companyId).workerId);
+        allow write: if sameCompany(companyId)
+          && (fullDataRole(companyId)
+            || (supervisor(companyId) && assignedProject(companyId, request.resource.data.siteId)));
+      }
+
+      match /payrollRuns/{docId} {
+        allow read: if fullDataRole(companyId)
+          || (worker(companyId) && resource.data.workerId == member(companyId).workerId);
+        allow write: if ownerOrAdmin(companyId) && sameCompany(companyId);
+      }
+
       match /invites/{inviteId} {
         allow read: if ownerOrAdmin(companyId);
         allow create, update, delete: if ownerOrAdmin(companyId);
