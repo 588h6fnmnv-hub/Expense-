@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function emailLower() {
+      return signedIn() ? string(request.auth.token.email).lower() : '';
+    }
+
+    function isCompanyMember(companyId) {
+      return signedIn() && firestore.exists(
+        /databases/(default)/documents/companies/$(companyId)/members/$(emailLower())
+      );
+    }
+
+    // Read-only for company members. Uploads should go through backend routes in this phase
+    // so file validation, OCR, audit logging, and billing limits can be enforced server-side.
+    match /companies/{companyId}/{allPaths=**} {
+      allow read: if isCompanyMember(companyId);
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

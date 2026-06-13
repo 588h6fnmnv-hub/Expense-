@@ -1,0 +1,40 @@
+{
+  "name": "expense-tracker-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3004",
+    "dev:clean": "rm -rf .next && next dev -p 3004",
+    "build": "next build",
+    "build:clean": "rm -rf .next && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "node --test tests/*.test.mjs",
+    "test:migration": "node scripts/test-migration.js",
+    "migrate:wallets": "node scripts/migrate-wallet-to-company-subcollections.js",
+    "smoke:company": "node scripts/smoke-company-collections.js"
+  },
+  "dependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.67",
+    "@types/react-dom": "^18.2.22",
+    "autoprefixer": "^10.4.18",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.9.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "next": "^15.5.16",
+    "next-auth": "^4.24.14",
+    "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^3.8.1",
+    "typescript": "^5.4.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.16",
+    "tailwindcss": "^3.4.1"
+  }
+}
