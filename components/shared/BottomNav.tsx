@@ -5,10 +5,9 @@ import type { ThemeMode } from "@/lib/types";
 export type BottomNavItem =
   | "Home"
   | "Sites"
-  | "Workers"
+  | "People"
   | "Add"
-  | "Materials"
-  | "Reports"
+  | "Money"
   | "Settings"
   | "Admin";
 
@@ -26,14 +25,12 @@ const iconForItem = (item: BottomNavItem) => {
       return "home";
     case "Sites":
       return "foundation";
-    case "Workers":
+    case "People":
       return "group";
     case "Add":
       return "add_circle";
-    case "Materials":
-      return "inventory_2";
-    case "Reports":
-      return "analytics";
+    case "Money":
+      return "payments";
     case "Settings":
       return "settings";
     case "Admin":

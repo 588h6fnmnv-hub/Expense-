@@ -21,6 +21,11 @@ import ReminderCenter from "@/components/reminders/ReminderCenter";
 import ReportsView from "@/components/reports/ReportsView";
 import SitesView from "@/components/sites/SitesView";
 import WorkersTab from "@/components/workers/WorkersTab";
+import QuickActionSheet from "@/components/shared/QuickActionSheet";
+import PeopleDashboard from "@/components/people/PeopleDashboard";
+import FinancialReports from "@/components/reports/FinancialReports";
+import AttendanceTracker from "@/components/workers/AttendanceTracker";
+import PayrollSummary from "@/components/workers/PayrollSummary";
 import {
   normalizeConstructionWorkerRole,
   normalizeMaterialCategory,
@@ -210,12 +215,9 @@ type DashboardTab =
   | "Home"
   | "Account"
   | "Sites"
-  | "Workers"
-  | "Materials"
-  | "Reminders"
-  | "Accounts"
+  | "People"
+  | "Money"
   | "Add"
-  | "Reports"
   | "Settings"
   | "Admin";
 type FormPreset = {
@@ -1951,6 +1953,7 @@ export default function Home() {
   const [registeredUsers, setRegisteredUsers] = useState<AdminUser[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
   const [tab, setTab] = useState<DashboardTab>("Home");
+  const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<CardItem[]>([]);
@@ -1961,6 +1964,12 @@ export default function Home() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [dailyReports, setDailyReports] = useState<DailyWorkReport[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [supplierBills, setSupplierBills] = useState<SupplierBill[]>([]);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [accountBalances, setAccountBalances] = useState<AccountBalances>(
     emptyAccountBalances()
   );
@@ -2125,7 +2134,7 @@ export default function Home() {
           setShowWelcome(false);
           setStorageStatus("local");
           setWalletReady(true);
-          setTab(session.role === "worker" ? "Workers" : "Sites");
+          setTab(session.role === "worker" ? "People" : "Sites");
           return;
         }
       }
@@ -2595,16 +2604,16 @@ export default function Home() {
   const isAdmin = DEMO_ADMIN_ENABLED && savedUser === TEMP_DOMAIN_USERNAME;
   const navItems: BottomNavItem[] = (() => {
     if (accessContext.role === "worker") {
-      return ["Workers"];
+      return ["People"];
     }
 
     if (accessContext.role === "supervisor") {
-      return ["Sites", "Workers"];
+      return ["Sites", "People"];
     }
 
     return isAdmin
-      ? ["Home", "Sites", "Workers", "Add", "Materials", "Reports", "Settings", "Admin"]
-      : ["Home", "Sites", "Workers", "Add", "Materials", "Reports", "Settings"];
+      ? ["Home", "Sites", "People", "Add", "Money", "Settings", "Admin"]
+      : ["Home", "Sites", "People", "Add", "Money", "Settings"];
   })();
   const displayName =
     employeeSession?.displayName || profileName || savedUser;
@@ -2658,7 +2667,7 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
-    if (!savedUser || navItems.includes(tab as BottomNavItem)) {
+    if (!savedUser || navItems.includes(tab as BottomNavItem) || tab === "Account") {
       return;
     }
 
@@ -2858,7 +2867,7 @@ export default function Home() {
       setShowWelcome(false);
       setWalletReady(true);
       setStorageStatus("local");
-      setTab(finalRole === "worker" ? "Workers" : "Sites");
+      setTab(finalRole === "worker" ? "People" : "Sites");
     } catch (e) {
       setLoginError("Invite acceptance failed.");
       return;
@@ -3983,67 +3992,90 @@ export default function Home() {
           </TabErrorBoundary>
         )}
 
-        {tab === "Workers" && (
-          <TabErrorBoundary name="Workers">
-          <WorkersTab
-            workers={visibleWorkers}
-            projects={visibleProjects}
-            transactions={visibleTransactions}
-            dailyReports={visibleDailyReports}
-            companyName={company?.name || "Business"}
-            accessRole={accessContext.role}
-            canManageWorkers={canManageWorkers}
-            canManageLedger={canViewFinance}
-            canReviewReports={accessContext.role !== "worker"}
-            onCreateWorker={createWorker}
-            onUpdateWorker={updateWorker}
-            onCreateDailyReport={createDailyReport}
-            onUpdateDailyReport={updateDailyReport}
-            onAddEntry={addWorkerEntry}
-            onDeleteEntry={deleteWorkerEntry}
-          />
+        {tab === "People" && (
+          <TabErrorBoundary name="People">
+            <div className="space-y-8">
+              <PeopleDashboard
+                customers={customers}
+                suppliers={suppliers}
+                theme={theme}
+                onCreateCustomer={(c) => setCustomers(curr => [...curr, { ...c, id: uid() }])}
+                onCreateSupplier={(s) => setSuppliers(curr => [...curr, { ...s, id: uid() }])}
+              />
+
+              <WorkersTab
+                workers={visibleWorkers}
+                projects={visibleProjects}
+                transactions={visibleTransactions}
+                dailyReports={visibleDailyReports}
+                companyName={company?.name || "Business"}
+                accessRole={accessContext.role}
+                canManageWorkers={canManageWorkers}
+                canManageLedger={canViewFinance}
+                canReviewReports={accessContext.role !== "worker"}
+                onCreateWorker={createWorker}
+                onUpdateWorker={updateWorker}
+                onCreateDailyReport={createDailyReport}
+                onUpdateDailyReport={updateDailyReport}
+                onAddEntry={addWorkerEntry}
+                onDeleteEntry={deleteWorkerEntry}
+              />
+
+              <AttendanceTracker attendance={attendance} theme={theme} />
+              <PayrollSummary payrollRuns={payrollRuns} theme={theme} />
+            </div>
           </TabErrorBoundary>
         )}
 
-        {tab === "Materials" && (
-          <TabErrorBoundary name="Materials">
-          <div className="space-y-5">
-            <MaterialTracker
-              materials={visibleMaterials}
-              projects={visibleProjects}
-              reminders={visibleReminders}
-              onCreateMaterial={createMaterial}
-              onUpdateMaterial={updateMaterial}
-              onDeleteMaterial={deleteMaterial}
-              onCreateReminder={createReminder}
-            />
-            <ReminderCenter
-              reminders={visibleReminders}
-              projects={visibleProjects}
-              onCreateReminder={createReminder}
-              onUpdateReminder={updateReminder}
-              onDeleteReminder={deleteReminder}
-            />
-          </div>
-          </TabErrorBoundary>
-        )}
+        {canViewFinance && tab === "Money" && (
+          <TabErrorBoundary name="Money">
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'}`}>
+                    <h3 className="text-sm font-bold opacity-50 uppercase mb-2">Accounts Receivable</h3>
+                    <p className="text-3xl font-black text-emerald-500">₹{invoices.reduce((s, i) => s + (i.status !== 'Paid' ? i.total : 0), 0).toLocaleString('en-IN')}</p>
+                 </div>
+                 <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'}`}>
+                    <h3 className="text-sm font-bold opacity-50 uppercase mb-2">Accounts Payable</h3>
+                    <p className="text-3xl font-black text-danger-red">₹{supplierBills.reduce((s, i) => s + (i.status !== 'Paid' ? i.total : 0), 0).toLocaleString('en-IN')}</p>
+                 </div>
+              </div>
 
-        {canViewFinance && tab === "Reports" && (
-          <TabErrorBoundary name="Reports">
-          <ReportsView
-            selectedMonthLabel={formatMonth(selectedMonth)}
-            selectedMonthKey={selectedMonth}
-            canShowNextMonth={canShowNextMonth}
-            accounts={reportAccounts}
-            reportTransactions={reportTransactions}
-            totalBalance={accountCurrent}
-            projects={visibleProjects}
-            materials={visibleMaterials}
-            workers={visibleWorkers}
-            company={company}
-            onPreviousMonth={() => setSelectedMonth(moveMonth(selectedMonth, -1))}
-            onNextMonth={() => setSelectedMonth(moveMonth(selectedMonth, 1))}
-          />
+              <FinancialReports theme={theme} />
+
+              <MaterialTracker
+                materials={visibleMaterials}
+                projects={visibleProjects}
+                reminders={visibleReminders}
+                onCreateMaterial={createMaterial}
+                onUpdateMaterial={updateMaterial}
+                onDeleteMaterial={deleteMaterial}
+                onCreateReminder={createReminder}
+              />
+
+              <ReportsView
+                selectedMonthLabel={formatMonth(selectedMonth)}
+                selectedMonthKey={selectedMonth}
+                canShowNextMonth={canShowNextMonth}
+                accounts={reportAccounts}
+                reportTransactions={reportTransactions}
+                totalBalance={accountCurrent}
+                projects={visibleProjects}
+                materials={visibleMaterials}
+                workers={visibleWorkers}
+                company={company}
+                onPreviousMonth={() => setSelectedMonth(moveMonth(selectedMonth, -1))}
+                onNextMonth={() => setSelectedMonth(moveMonth(selectedMonth, 1))}
+              />
+
+              <ReminderCenter
+                reminders={visibleReminders}
+                projects={visibleProjects}
+                onCreateReminder={createReminder}
+                onUpdateReminder={updateReminder}
+                onDeleteReminder={deleteReminder}
+              />
+            </div>
           </TabErrorBoundary>
         )}
 
@@ -4252,6 +4284,20 @@ export default function Home() {
         </div>
       )}
 
+      <QuickActionSheet
+        isOpen={isQuickActionOpen}
+        onClose={() => setIsQuickActionOpen(false)}
+        theme={theme}
+        actions={[
+          { label: "Expense", icon: "remove_circle", color: "bg-danger-red", onClick: () => openForm("Expense") },
+          { label: "Income", icon: "add_circle", color: "bg-emerald-500", onClick: () => openForm("Income") },
+          { label: "Transfer", icon: "sync_alt", color: "bg-blue-500", onClick: () => openForm("Transfer") },
+          { label: "Site", icon: "foundation", color: "bg-amber-500", onClick: () => setTab("Sites") },
+          { label: "Worker", icon: "person_add", color: "bg-purple-500", onClick: () => setTab("People") },
+          { label: "Material", icon: "inventory_2", color: "bg-orange-500", onClick: () => setTab("Money") },
+        ]}
+      />
+
       <BottomNav
         items={navItems}
         activeTab={tab}
@@ -4263,8 +4309,7 @@ export default function Home() {
               showToast("This role cannot add finance entries.", "error");
               return;
             }
-            setTab("Home");
-            openForm("Expense");
+            setIsQuickActionOpen(true);
             return;
           }
 
