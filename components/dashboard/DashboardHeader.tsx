@@ -10,6 +10,7 @@ type DashboardHeaderProps = {
   storageStatusLabel: string;
   theme: ThemeMode;
   onThemeToggle: () => void;
+  onMenuToggle: () => void;
 };
 
 export default function DashboardHeader({
@@ -20,6 +21,7 @@ export default function DashboardHeader({
   storageStatusLabel,
   theme,
   onThemeToggle,
+  onMenuToggle,
 }: DashboardHeaderProps) {
   const isSynced = storageStatusLabel.toLowerCase().includes("synced");
   const isPending =
@@ -45,6 +47,17 @@ export default function DashboardHeader({
       }`}
     >
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          className="w-10 h-10 -ml-2 rounded-full hover:bg-white/10 flex items-center justify-center transition active:scale-95 duration-200"
+          aria-label="Open menu"
+        >
+          <span className="material-symbols-outlined text-2xl leading-none">
+            menu
+          </span>
+        </button>
+
         {userImage ? (
           <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shrink-0">
             <img

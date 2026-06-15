@@ -189,6 +189,29 @@ export type ReminderItem = {
   notificationReady?: boolean;
 };
 
+export type DashboardTab =
+  | "Home"
+  | "Account"
+  | "Sites"
+  | "People"
+  | "Money"
+  | "Add"
+  | "Settings"
+  | "Admin"
+  | "Analytics"
+  | "DeliveryDashboard"
+  | "Ratio"
+  | "DailyReport"
+  | "DailyCashReport"
+  | "GroupAnalytics"
+  | "POS"
+  | "PriceChecker"
+  | "ZeevOrders"
+  | "SalesReceipt"
+  | "SalesOrder"
+  | "Quotation"
+  | "RouteSales";
+
 export type ThemeMode = "light" | "dark";
 
 export type ActivityLogItem = {
