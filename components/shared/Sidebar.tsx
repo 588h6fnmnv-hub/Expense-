@@ -22,30 +22,30 @@ type NavItem = {
 
 const homeItems: NavItem[] = [
   { id: "Home", label: "Home", icon: "home" },
-  { id: "Add", label: "Quick Action", icon: "add_circle" },
-  { id: "Account", label: "Account", icon: "person" },
-  { id: "Sites", label: "Sites", icon: "foundation" },
-  { id: "People", label: "People", icon: "group" },
-  { id: "Money", label: "Money", icon: "payments" },
   { id: "Analytics", label: "Analytics", icon: "pie_chart" },
+  { id: "DeliveryDashboard", label: "Delivery Dashboard", icon: "pie_chart" },
+  { id: "Ratio", label: "Ratio", icon: "pie_chart" },
+  { id: "DailyReport", label: "Daily Report", icon: "inventory_2" },
+  { id: "DailyCashReport", label: "Daily Cash Report", icon: "inventory_2" },
+  { id: "GroupAnalytics", label: "Group Analytics", icon: "inventory_2" },
 ];
 
 const salesItems: NavItem[] = [
-  { id: "POS", label: "POS", icon: "receipt_long" },
-  { id: "PriceChecker", label: "Price Checker", icon: "receipt_long" },
-  { id: "ZeevOrders", label: "Zeev Orders", icon: "chat_bubble" },
+  { id: "POS", label: "POS", icon: "local_mall" },
+  { id: "PriceChecker", label: "Price Checker", icon: "sell" },
+  { id: "ZeevOrders", label: "Zeev Orders", icon: "chat" },
   { id: "SalesReceipt", label: "Sales Receipt", icon: "description" },
   { id: "SalesOrder", label: "Sales Order", icon: "description" },
   { id: "Quotation", label: "Quotation", icon: "description" },
   { id: "RouteSales", label: "Route Sales", icon: "description" },
 ];
 
-const reportItems: NavItem[] = [
-  { id: "DailyReport", label: "Daily Report", icon: "inventory" },
-  { id: "DailyCashReport", label: "Daily Cash Report", icon: "inventory" },
-  { id: "DeliveryDashboard", label: "Delivery Dashboard", icon: "pie_chart" },
-  { id: "Ratio", label: "Ratio", icon: "pie_chart" },
-  { id: "GroupAnalytics", label: "Group Analytics", icon: "inventory" },
+const generalItems: NavItem[] = [
+  { id: "Add", label: "Quick Action", icon: "add_circle" },
+  { id: "Account", label: "Account", icon: "person" },
+  { id: "Sites", label: "Sites", icon: "foundation" },
+  { id: "People", label: "People", icon: "group" },
+  { id: "Money", label: "Money", icon: "payments" },
 ];
 
 const systemItems: NavItem[] = [
@@ -79,7 +79,7 @@ export default function Sidebar({
       <aside
         className={`fixed top-0 left-0 bottom-0 z-[70] w-72 max-w-[80vw] transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } ${
+        } ${!isOpen ? "pointer-events-none" : ""} ${
           theme === "dark"
             ? "bg-background border-r border-white/10 text-on-surface"
             : "bg-white border-r border-black/5 text-black"
@@ -87,20 +87,24 @@ export default function Sidebar({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="p-1 hover:bg-white/10 rounded-full transition"
             >
               <span className="material-symbols-outlined text-2xl">close</span>
             </button>
-            <div className="w-10 h-10 bg-neutral-300 rounded-full flex items-center justify-center text-background font-black text-xl">
+            <div className="w-10 h-10 bg-neutral-300 rounded-full flex items-center justify-center text-background font-black text-xl shrink-0">
               {initial}
+            </div>
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="font-bold truncate">{companyName || "Primary Sales"}</span>
+              <span className="material-symbols-outlined text-sm opacity-50">expand_more</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-emerald-400">rss_feed</span>
-            <span className="material-symbols-outlined opacity-50">person</span>
+            <span className="material-symbols-outlined text-emerald-400 text-xl">wifi</span>
+            <span className="material-symbols-outlined opacity-50 text-xl">person</span>
           </div>
         </div>
 
@@ -108,8 +112,8 @@ export default function Sidebar({
           {/* Company Selector */}
           <div className="relative">
             <button className="w-full flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
-              <div className="flex items-center gap-2 text-primary font-bold">
-                <span className="material-symbols-outlined text-xl">store</span>
+              <div className="flex items-center gap-2 text-emerald-500 font-bold">
+                <span className="material-symbols-outlined text-xl">local_mall</span>
                 <span className="truncate">{companyName || "Primary Sales"}</span>
               </div>
               <span className="material-symbols-outlined">unfold_more</span>
@@ -133,16 +137,16 @@ export default function Sidebar({
             {homeItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
               <div>
                 <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                  General
+                  Home
                 </h3>
                 <div className="space-y-1">
                   {homeItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
                     <button
                       key={item.id}
-                    onClick={() => {
-                      onSelect(item.id);
-                      onClose();
-                    }}
+                      onClick={() => {
+                        onSelect(item.id);
+                        onClose();
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         activeTab === item.id
                           ? "bg-primary/10 text-primary font-bold"
@@ -173,10 +177,10 @@ export default function Sidebar({
                   {salesItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
                     <button
                       key={item.id}
-                    onClick={() => {
-                      onSelect(item.id);
-                      onClose();
-                    }}
+                      onClick={() => {
+                        onSelect(item.id);
+                        onClose();
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         activeTab === item.id
                           ? "bg-primary/10 text-primary font-bold"
@@ -198,19 +202,19 @@ export default function Sidebar({
               </div>
             )}
 
-            {reportItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+            {generalItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
               <div>
                 <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                  Reports
+                  General
                 </h3>
                 <div className="space-y-1">
-                  {reportItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+                  {generalItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
                     <button
                       key={item.id}
-                    onClick={() => {
-                      onSelect(item.id);
-                      onClose();
-                    }}
+                      onClick={() => {
+                        onSelect(item.id);
+                        onClose();
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         activeTab === item.id
                           ? "bg-primary/10 text-primary font-bold"
@@ -241,10 +245,10 @@ export default function Sidebar({
                   {systemItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
                     <button
                       key={item.id}
-                    onClick={() => {
-                      onSelect(item.id);
-                      onClose();
-                    }}
+                      onClick={() => {
+                        onSelect(item.id);
+                        onClose();
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         activeTab === item.id
                           ? "bg-primary/10 text-primary font-bold"
