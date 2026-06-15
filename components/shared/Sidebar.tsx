@@ -8,6 +8,8 @@ type SidebarProps = {
   onClose: () => void;
   activeTab: string;
   onSelect: (tab: DashboardTab) => void;
+  onLogout?: () => void;
+  allowedTabs?: readonly DashboardTab[];
   theme: ThemeMode;
   companyName?: string;
 };
@@ -20,15 +22,12 @@ type NavItem = {
 
 const homeItems: NavItem[] = [
   { id: "Home", label: "Home", icon: "home" },
+  { id: "Add", label: "Quick Action", icon: "add_circle" },
+  { id: "Account", label: "Account", icon: "person" },
   { id: "Sites", label: "Sites", icon: "foundation" },
   { id: "People", label: "People", icon: "group" },
   { id: "Money", label: "Money", icon: "payments" },
   { id: "Analytics", label: "Analytics", icon: "pie_chart" },
-  { id: "DeliveryDashboard", label: "Delivery Dashboard", icon: "pie_chart" },
-  { id: "Ratio", label: "Ratio", icon: "pie_chart" },
-  { id: "DailyReport", label: "Daily Report", icon: "inventory" },
-  { id: "DailyCashReport", label: "Daily Cash Report", icon: "inventory" },
-  { id: "GroupAnalytics", label: "Group Analytics", icon: "inventory" },
 ];
 
 const salesItems: NavItem[] = [
@@ -41,11 +40,26 @@ const salesItems: NavItem[] = [
   { id: "RouteSales", label: "Route Sales", icon: "description" },
 ];
 
+const reportItems: NavItem[] = [
+  { id: "DailyReport", label: "Daily Report", icon: "inventory" },
+  { id: "DailyCashReport", label: "Daily Cash Report", icon: "inventory" },
+  { id: "DeliveryDashboard", label: "Delivery Dashboard", icon: "pie_chart" },
+  { id: "Ratio", label: "Ratio", icon: "pie_chart" },
+  { id: "GroupAnalytics", label: "Group Analytics", icon: "inventory" },
+];
+
+const systemItems: NavItem[] = [
+  { id: "Settings", label: "Settings", icon: "settings" },
+  { id: "Admin", label: "Admin", icon: "admin_panel_settings" },
+];
+
 export default function Sidebar({
   isOpen,
   onClose,
   activeTab,
   onSelect,
+  onLogout,
+  allowedTabs,
   theme,
   companyName,
 }: SidebarProps) {
@@ -116,70 +130,156 @@ export default function Sidebar({
 
           {/* Navigation Sections */}
           <nav className="space-y-6 pb-8">
-            <div>
-              <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                Home
-              </h3>
-              <div className="space-y-1">
-                {homeItems.map((item) => (
-                  <button
-                    key={item.id}
+            {homeItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+              <div>
+                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
+                  General
+                </h3>
+                <div className="space-y-1">
+                  {homeItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+                    <button
+                      key={item.id}
                     onClick={() => {
                       onSelect(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                      activeTab === item.id
-                        ? "bg-primary/10 text-primary font-bold"
-                        : "hover:bg-white/5 opacity-70"
-                    }`}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{
-                        fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
-                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                        activeTab === item.id
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "hover:bg-white/5 opacity-70"
+                      }`}
                     >
-                      {item.icon}
-                    </span>
-                    <span className="text-sm">{item.label}</span>
-                  </button>
-                ))}
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-sm">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                Sales
-              </h3>
-              <div className="space-y-1">
-                {salesItems.map((item) => (
-                  <button
-                    key={item.id}
+            {salesItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+              <div>
+                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
+                  Sales
+                </h3>
+                <div className="space-y-1">
+                  {salesItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+                    <button
+                      key={item.id}
                     onClick={() => {
                       onSelect(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                      activeTab === item.id
-                        ? "bg-primary/10 text-primary font-bold"
-                        : "hover:bg-white/5 opacity-70"
-                    }`}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{
-                        fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
-                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                        activeTab === item.id
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "hover:bg-white/5 opacity-70"
+                      }`}
                     >
-                      {item.icon}
-                    </span>
-                    <span className="text-sm">{item.label}</span>
-                  </button>
-                ))}
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-sm">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {reportItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+              <div>
+                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
+                  Reports
+                </h3>
+                <div className="space-y-1">
+                  {reportItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+                    <button
+                      key={item.id}
+                    onClick={() => {
+                      onSelect(item.id);
+                      onClose();
+                    }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                        activeTab === item.id
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "hover:bg-white/5 opacity-70"
+                      }`}
+                    >
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-sm">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {systemItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+              <div>
+                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
+                  System
+                </h3>
+                <div className="space-y-1">
+                  {systemItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+                    <button
+                      key={item.id}
+                    onClick={() => {
+                      onSelect(item.id);
+                      onClose();
+                    }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                        activeTab === item.id
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "hover:bg-white/5 opacity-70"
+                      }`}
+                    >
+                      <span
+                        className="material-symbols-outlined"
+                        style={{
+                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-sm">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </nav>
+
+          {/* Logout */}
+          <div className="pt-4 border-t border-white/5">
+            <button
+              onClick={() => {
+                if (onLogout) onLogout();
+                onClose();
+              }}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-colors"
+            >
+              <span className="material-symbols-outlined">logout</span>
+              <span className="text-sm font-bold">Log out</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

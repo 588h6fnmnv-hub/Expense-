@@ -8,9 +8,6 @@ import {
   useState,
 } from "react";
 import AdminDashboard from "@/components/admin/AdminDashboard";
-import BottomNav, {
-  type BottomNavItem,
-} from "@/components/shared/BottomNav";
 import TabErrorBoundary from "@/components/shared/TabErrorBoundary";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/shared/Sidebar";
@@ -2602,19 +2599,45 @@ export default function Home() {
     ];
   }, [visibleMaterials, visibleProjects, visibleTransactions, visibleWorkers]);
   const isAdmin = DEMO_ADMIN_ENABLED && savedUser === TEMP_DOMAIN_USERNAME;
-  const navItems: BottomNavItem[] = (() => {
+  const allowedTabs: DashboardTab[] = useMemo(() => {
     if (accessContext.role === "worker") {
-      return ["People"];
+      return ["Account", "People"];
     }
 
     if (accessContext.role === "supervisor") {
-      return ["Sites", "People"];
+      return ["Account", "Sites", "People"];
     }
 
-    return isAdmin
-      ? ["Home", "Sites", "People", "Add", "Money", "Settings", "Admin"]
-      : ["Home", "Sites", "People", "Add", "Money", "Settings"];
-  })();
+    const base: DashboardTab[] = [
+      "Home",
+      "Account",
+      "Sites",
+      "People",
+      "Money",
+      "Add",
+      "Settings",
+      "Analytics",
+      "DeliveryDashboard",
+      "Ratio",
+      "DailyReport",
+      "DailyCashReport",
+      "GroupAnalytics",
+      "POS",
+      "PriceChecker",
+      "ZeevOrders",
+      "SalesReceipt",
+      "SalesOrder",
+      "Quotation",
+      "RouteSales",
+    ];
+
+    if (isAdmin) {
+      base.push("Admin");
+    }
+
+    return base;
+  }, [accessContext.role, isAdmin]);
+
   const displayName =
     employeeSession?.displayName || profileName || savedUser;
   const syncNotice =
@@ -2667,13 +2690,14 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
-    if (!savedUser || navItems.includes(tab as BottomNavItem) || tab === "Account") {
+    if (!savedUser || allowedTabs.includes(tab)) {
       return;
     }
 
-    setTab(navItems[0] || "Home");
+    setTab(allowedTabs[0] || "Home");
     closeForm();
-  }, [savedUser, navItems, tab]);
+  }, [savedUser, allowedTabs, tab]);
+
 
   const openForm = (
     nextForm: TransactionType | "Balance" | "Transfer",
@@ -2705,6 +2729,25 @@ export default function Home() {
     setWalletReady(true);
     setStorageStatus("local");
     setTab("Home");
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    localStorage.removeItem("username");
+    localStorage.removeItem("authMode");
+    writeEmployeeSession(null);
+    localStorage.removeItem("profileName");
+    setSavedUser("");
+    setEmployeeSession(null);
+    setProfileName("");
+    setNameDraft("");
+    setAcceptedTerms(false);
+    setLoginError("");
+    setShowWelcome(false);
+    setTab("Home");
+    setStorageStatus("local");
+    setWalletReady(false);
+    applyWalletData(emptyWalletData());
   };
   const closeForm = () => {
     setForm(null);
@@ -3910,7 +3953,19 @@ export default function Home() {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         activeTab={tab}
-        onSelect={(selectedTab) => setTab(selectedTab)}
+        onSelect={(selectedTab) => {
+          if (selectedTab === "Add") {
+            if (!canWriteTransactions) {
+              showToast("This role cannot add finance entries.", "error");
+              return;
+            }
+            setIsQuickActionOpen(true);
+            return;
+          }
+          setTab(selectedTab);
+        }}
+        onLogout={handleLogout}
+        allowedTabs={allowedTabs}
         theme={theme}
         companyName={company?.name}
       />
@@ -4334,25 +4389,6 @@ export default function Home() {
         ]}
       />
 
-      <BottomNav
-        items={navItems}
-        activeTab={tab}
-        hasOpenForm={Boolean(form)}
-        theme={theme}
-        onSelect={(item) => {
-          if (item === "Add") {
-            if (!canWriteTransactions) {
-              showToast("This role cannot add finance entries.", "error");
-              return;
-            }
-            setIsQuickActionOpen(true);
-            return;
-          }
-
-          closeForm();
-          setTab(item);
-        }}
-      />
     </main>
   );
 }
