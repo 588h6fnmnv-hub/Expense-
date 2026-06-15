@@ -13,6 +13,7 @@ import BottomNav, {
 } from "@/components/shared/BottomNav";
 import TabErrorBoundary from "@/components/shared/TabErrorBoundary";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import Sidebar from "@/components/shared/Sidebar";
 import HomeDashboard from "@/components/dashboard/HomeDashboard";
 import SettingsView, { type CardDraft } from "@/components/settings/SettingsView";
 import EntrySheet from "@/components/transactions/EntrySheet";
@@ -217,15 +218,7 @@ const TEMP_DOMAIN_USERNAME =
   process.env.NEXT_PUBLIC_DEMO_ADMIN_USERNAME || "expense-admin";
 const DEMO_USER = "demo-company@ledge.local";
 const APP_NAME = "Ledge";
-type DashboardTab =
-  | "Home"
-  | "Account"
-  | "Sites"
-  | "People"
-  | "Money"
-  | "Add"
-  | "Settings"
-  | "Admin";
+import { type DashboardTab } from "@/lib/types";
 type FormPreset = {
   category?: string;
   name?: string;
@@ -1959,6 +1952,7 @@ export default function Home() {
   const [registeredUsers, setRegisteredUsers] = useState<AdminUser[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
   const [tab, setTab] = useState<DashboardTab>("Home");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -3912,6 +3906,15 @@ export default function Home() {
         : "bg-neutral-50 text-black"
         }`}>
 
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        activeTab={tab}
+        onSelect={(selectedTab) => setTab(selectedTab)}
+        theme={theme}
+        companyName={company?.name}
+      />
+
       <DashboardHeader
         appName={APP_NAME}
         company={company}
@@ -3922,6 +3925,7 @@ export default function Home() {
         onThemeToggle={() =>
           setTheme((current) => (current === "dark" ? "light" : "dark"))
         }
+        onMenuToggle={() => setIsSidebarOpen(true)}
       />
 
       {!walletReady && (
@@ -4212,6 +4216,32 @@ export default function Home() {
             isFirebaseConfigured={isFirebaseConfigured}
             adminUsername={savedUser}
           />
+        )}
+
+        {[
+          "Analytics",
+          "DeliveryDashboard",
+          "Ratio",
+          "DailyReport",
+          "DailyCashReport",
+          "GroupAnalytics",
+          "POS",
+          "PriceChecker",
+          "ZeevOrders",
+          "SalesReceipt",
+          "SalesOrder",
+          "Quotation",
+          "RouteSales",
+        ].includes(tab) && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+              <span className="material-symbols-outlined text-4xl text-primary">construction</span>
+            </div>
+            <h2 className="text-2xl font-black mb-2">{tab.replace(/([A-Z])/g, ' $1').trim()}</h2>
+            <p className="opacity-50 max-w-xs">
+              This module is currently being integrated into your construction workspace.
+            </p>
+          </div>
         )}
       </section>
 
