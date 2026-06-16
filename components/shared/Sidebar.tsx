@@ -20,32 +20,12 @@ type NavItem = {
   icon: string;
 };
 
-const homeItems: NavItem[] = [
+const mainItems: NavItem[] = [
   { id: "Home", label: "Home", icon: "home" },
-  { id: "Analytics", label: "Analytics", icon: "pie_chart" },
-  { id: "DeliveryDashboard", label: "Delivery Dashboard", icon: "pie_chart" },
-  { id: "Ratio", label: "Ratio", icon: "pie_chart" },
-  { id: "DailyReport", label: "Daily Report", icon: "inventory_2" },
-  { id: "DailyCashReport", label: "Daily Cash Report", icon: "inventory_2" },
-  { id: "GroupAnalytics", label: "Group Analytics", icon: "inventory_2" },
-];
-
-const salesItems: NavItem[] = [
-  { id: "POS", label: "POS", icon: "local_mall" },
-  { id: "PriceChecker", label: "Price Checker", icon: "sell" },
-  { id: "ZeevOrders", label: "Zeev Orders", icon: "chat" },
-  { id: "SalesReceipt", label: "Sales Receipt", icon: "description" },
-  { id: "SalesOrder", label: "Sales Order", icon: "description" },
-  { id: "Quotation", label: "Quotation", icon: "description" },
-  { id: "RouteSales", label: "Route Sales", icon: "description" },
-];
-
-const generalItems: NavItem[] = [
-  { id: "Add", label: "Quick Action", icon: "add_circle" },
-  { id: "Account", label: "Account", icon: "person" },
   { id: "Sites", label: "Sites", icon: "foundation" },
   { id: "People", label: "People", icon: "group" },
   { id: "Money", label: "Money", icon: "payments" },
+  { id: "Account", label: "Account", icon: "account_balance_wallet" },
 ];
 
 const systemItems: NavItem[] = [
@@ -63,7 +43,7 @@ export default function Sidebar({
   theme,
   companyName,
 }: SidebarProps) {
-  const initial = companyName ? companyName.charAt(0).toUpperCase() : "B";
+  const initial = companyName ? companyName.charAt(0).toUpperCase() : "L";
 
   return (
     <>
@@ -94,11 +74,11 @@ export default function Sidebar({
             >
               <span className="material-symbols-outlined text-2xl">close</span>
             </button>
-            <div className="w-10 h-10 bg-neutral-300 rounded-full flex items-center justify-center text-background font-black text-xl shrink-0">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-background font-black text-xl shrink-0">
               {initial}
             </div>
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-bold truncate">{companyName || "Primary Sales"}</span>
+              <span className="font-bold truncate">{companyName || "Ledge"}</span>
               <span className="material-symbols-outlined text-sm opacity-50">expand_more</span>
             </div>
           </div>
@@ -108,20 +88,34 @@ export default function Sidebar({
           </div>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-70px)]">
+        <div className="p-4 space-y-4 overflow-y-auto h-[calc(100vh-70px)]">
           {/* Company Selector */}
           <div className="relative">
             <button className="w-full flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition">
               <div className="flex items-center gap-2 text-emerald-500 font-bold">
-                <span className="material-symbols-outlined text-xl">local_mall</span>
-                <span className="truncate">{companyName || "Primary Sales"}</span>
+                <span className="material-symbols-outlined text-xl">foundation</span>
+                <span className="truncate">{companyName || "Ledge"}</span>
               </div>
               <span className="material-symbols-outlined">unfold_more</span>
             </button>
           </div>
 
+          {/* Quick Action Button */}
+          {(!allowedTabs || allowedTabs.includes("Add")) && (
+            <button
+              onClick={() => {
+                onSelect("Add");
+                onClose();
+              }}
+              className="w-full h-12 bg-primary text-background rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg mb-4"
+            >
+              <span className="material-symbols-outlined">add_circle</span>
+              Quick Action
+            </button>
+          )}
+
           {/* Search */}
-          <div className="relative">
+          <div className="relative mb-6">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 opacity-30">
               search
             </span>
@@ -134,13 +128,11 @@ export default function Sidebar({
 
           {/* Navigation Sections */}
           <nav className="space-y-6 pb-8">
-            {homeItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
-              <div>
-                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                  Home
-                </h3>
-                <div className="space-y-1">
-                  {homeItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
+            <div>
+              <div className="space-y-1">
+                {mainItems
+                  .filter((i) => !allowedTabs || allowedTabs.includes(i.id))
+                  .map((item) => (
                     <button
                       key={item.id}
                       onClick={() => {
@@ -164,108 +156,41 @@ export default function Sidebar({
                       <span className="text-sm">{item.label}</span>
                     </button>
                   ))}
-                </div>
               </div>
-            )}
+            </div>
 
-            {salesItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
-              <div>
-                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                  Sales
-                </h3>
-                <div className="space-y-1">
-                  {salesItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelect(item.id);
-                        onClose();
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                        activeTab === item.id
-                          ? "bg-primary/10 text-primary font-bold"
-                          : "hover:bg-white/5 opacity-70"
-                      }`}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
-                        }}
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="text-sm">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {generalItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
-              <div>
-                <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
-                  General
-                </h3>
-                <div className="space-y-1">
-                  {generalItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelect(item.id);
-                        onClose();
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                        activeTab === item.id
-                          ? "bg-primary/10 text-primary font-bold"
-                          : "hover:bg-white/5 opacity-70"
-                      }`}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
-                        }}
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="text-sm">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {systemItems.some(i => !allowedTabs || allowedTabs.includes(i.id)) && (
+            {systemItems.some((i) => !allowedTabs || allowedTabs.includes(i.id)) && (
               <div>
                 <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
                   System
                 </h3>
                 <div className="space-y-1">
-                  {systemItems.filter(i => !allowedTabs || allowedTabs.includes(i.id)).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelect(item.id);
-                        onClose();
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                        activeTab === item.id
-                          ? "bg-primary/10 text-primary font-bold"
-                          : "hover:bg-white/5 opacity-70"
-                      }`}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{
-                          fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                  {systemItems
+                    .filter((i) => !allowedTabs || allowedTabs.includes(i.id))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onSelect(item.id);
+                          onClose();
                         }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                          activeTab === item.id
+                            ? "bg-primary/10 text-primary font-bold"
+                            : "hover:bg-white/5 opacity-70"
+                        }`}
                       >
-                        {item.icon}
-                      </span>
-                      <span className="text-sm">{item.label}</span>
-                    </button>
-                  ))}
+                        <span
+                          className="material-symbols-outlined"
+                          style={{
+                            fontVariationSettings: activeTab === item.id ? "'FILL' 1" : "'FILL' 0",
+                          }}
+                        >
+                          {item.icon}
+                        </span>
+                        <span className="text-sm">{item.label}</span>
+                      </button>
+                    ))}
                 </div>
               </div>
             )}

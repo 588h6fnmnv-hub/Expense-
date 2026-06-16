@@ -197,20 +197,7 @@ export type DashboardTab =
   | "Money"
   | "Add"
   | "Settings"
-  | "Admin"
-  | "Analytics"
-  | "DeliveryDashboard"
-  | "Ratio"
-  | "DailyReport"
-  | "DailyCashReport"
-  | "GroupAnalytics"
-  | "POS"
-  | "PriceChecker"
-  | "ZeevOrders"
-  | "SalesReceipt"
-  | "SalesOrder"
-  | "Quotation"
-  | "RouteSales";
+  | "Admin";
 
 export type ThemeMode = "light" | "dark";
 
