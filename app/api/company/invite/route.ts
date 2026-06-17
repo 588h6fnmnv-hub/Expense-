@@ -39,6 +39,7 @@ export async function POST(request: Request) {
 
     const role: Role | null = normalizeRole(body.role) as Role | null;
     if (!role) return jsonError("role is invalid", 400);
+    if (role === "owner") return jsonError("Cannot assign owner role directly", 403);
     if (!["supervisor", "worker", "admin", "manager", "accountant", "viewer"].includes(role)) {
       return jsonError("Only admin, supervisor, and worker invites are supported", 400);
     }
@@ -87,14 +88,21 @@ export async function POST(request: Request) {
     const memberDocRef = memberRef(companyId, memberEmail);
     if (!memberDocRef) return jsonError("Firebase admin is not configured", 503);
 
+    const exists = await memberDocRef.get();
+    const existingData = exists.exists ? exists.data() : null;
+
+    // Do not allow sending an invite to the company owner's email address.
+    // This prevents accidental demotion or hijacking of the owner account
+    // if an admin tries to re-invite the owner with a lower role.
+    if (existingData?.role === "owner") {
+      return jsonError("Cannot invite the company owner", 403);
+    }
+
     const memberId = memberDocIdForEmail(memberEmail);
 
     const createdAt = (await import("firebase-admin/firestore")).FieldValue.serverTimestamp();
 
-    let before: unknown | null = null;
-
-    const exists = await memberDocRef.get();
-    before = exists.exists ? exists.data() : null;
+    const before = existingData;
 
     await memberDocRef.set(
       {
@@ -110,7 +118,7 @@ export async function POST(request: Request) {
         status: "invited",
         temporary: isTemporary || false,
         expiresAt: invitePlaceholder ? expiresAt : null,
-        createdAt,
+        createdAt: before?.createdAt || createdAt,
         updatedAt: createdAt,
       },
       { merge: true }

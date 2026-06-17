@@ -8,6 +8,7 @@ import { logAuditEntry } from "@/lib/audit-log";
 import { requirePermission } from "@/lib/permissions";
 import {
   cleanDisplayText,
+  enforceRateLimit,
   isValidEmail,
   jsonError,
   jsonRouteError,
@@ -40,9 +41,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const companyId = requireValidCompanyId(searchParams.get("companyId"));
 
-    await requirePermission({
+    const permission = await requirePermission({
       companyId,
       action: "members:read",
+    });
+
+    await enforceRateLimit({
+      request,
+      key: "members:list",
+      limit: 60,
+      windowMs: 60_000,
+      userEmail: permission.email,
     });
 
     const db = getAdminDb();
@@ -69,7 +78,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, members });
   } catch (error) {
-    return jsonRouteError(error);
+    return jsonRouteError(error, request);
   }
 }
 
@@ -85,9 +94,17 @@ export async function POST(request: Request) {
 
     if (!isValidEmail(memberEmail)) return jsonError("memberEmail is invalid", 400);
 
-    await requirePermission({
+    const permission = await requirePermission({
       companyId,
       action: "members:write",
+    });
+
+    await enforceRateLimit({
+      request,
+      key: "members:write",
+      limit: 30,
+      windowMs: 60_000,
+      userEmail: permission.email,
     });
 
     const role = normalizeRole(body.role);
@@ -112,29 +129,39 @@ export async function POST(request: Request) {
 
     const memberId = memberDocIdForEmail(memberEmail);
 
-    const createdAt = (await import("firebase-admin/firestore")).FieldValue.serverTimestamp();
-    const updatedAt = createdAt;
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const timestamp = FieldValue.serverTimestamp();
 
-    const before = null;
+    let before: Record<string, unknown> | null = null;
 
     await db.runTransaction(async (tx) => {
-      // create/merge member doc
-      tx.set(memberDoc, {
-        id: memberId,
-        companyId,
-        email: memberEmail,
-        role,
-        displayName: cleanDisplayText(body.displayName, 120) || memberEmail,
-        invitedBy: email,
-        assignedSupervisor,
-        workerSubRole: workerSubRole || null,
-        status: "active",
-        createdAt,
-        updatedAt,
-      });
+      const snap = await tx.get(memberDoc);
+      before = snap.exists ? (snap.data() as Record<string, unknown>) : null;
 
-      // audit
-      // (audit write is best-effort outside tx to avoid cross-transaction complexity)
+      // Demotion protection: Never allow an Admin (or other role) to demote a company Owner.
+      // Roles like accountant/manager might be able to create members but not demote owners.
+      if (before?.role === "owner" && role !== "owner") {
+        throw Object.assign(new Error("Cannot demote the company owner"), { status: 403 });
+      }
+
+      // create/merge member doc
+      tx.set(
+        memberDoc,
+        {
+          id: memberId,
+          companyId,
+          email: memberEmail,
+          role,
+          displayName: cleanDisplayText(body.displayName, 120) || memberEmail,
+          invitedBy: before?.invitedBy || email,
+          assignedSupervisor,
+          workerSubRole: workerSubRole || null,
+          status: "active",
+          createdAt: before?.createdAt || timestamp,
+          updatedAt: timestamp,
+        },
+        { merge: true }
+      );
     });
 
     await logAuditEntry({
@@ -159,6 +186,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return jsonRouteError(error);
+    return jsonRouteError(error, request);
   }
 }
