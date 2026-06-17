@@ -39,8 +39,9 @@ export async function POST(request: Request) {
 
     const role: Role | null = normalizeRole(body.role) as Role | null;
     if (!role) return jsonError("role is invalid", 400);
+    if ((role as string) === "owner") return jsonError("Cannot assign owner role directly", 403);
     if (!["supervisor", "worker", "admin", "manager", "accountant", "viewer"].includes(role)) {
-      return jsonError("Only admin, supervisor, and worker invites are supported", 400);
+      return jsonError("Only staff roles (admin, manager, accountant, etc) or worker roles are supported for invites", 400);
     }
     const workerSubRole =
       role === "worker" ? normalizeWorkerSubRole(body.workerSubRole) : undefined;
@@ -87,38 +88,48 @@ export async function POST(request: Request) {
     const memberDocRef = memberRef(companyId, memberEmail);
     if (!memberDocRef) return jsonError("Firebase admin is not configured", 503);
 
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const timestamp = FieldValue.serverTimestamp();
+
     const memberId = memberDocIdForEmail(memberEmail);
+    let before: Record<string, unknown> | null = null;
+    let alreadyExists = false;
 
-    const createdAt = (await import("firebase-admin/firestore")).FieldValue.serverTimestamp();
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(memberDocRef);
+      before = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+      alreadyExists = snap.exists;
 
-    let before: unknown | null = null;
+      // Demotion protection: Never allow an Admin (or other role) to re-invite/demote a company Owner.
+      if (before?.role === "owner") {
+        throw Object.assign(new Error("Cannot invite the company owner"), { status: 403 });
+      }
 
-    const exists = await memberDocRef.get();
-    before = exists.exists ? exists.data() : null;
-
-    await memberDocRef.set(
-      {
-        id: memberId,
-        companyId,
-        email: memberEmail,
-        role: finalRole,
-        invitedBy: callerEmail,
-        assignedSupervisor,
-        workerSubRole: workerSubRole || null,
-        referralCode: invitePlaceholder?.code || null,
-        inviteLink: invitePlaceholder?.link || null,
-        status: "invited",
-        temporary: isTemporary || false,
-        expiresAt: invitePlaceholder ? expiresAt : null,
-        createdAt,
-        updatedAt: createdAt,
-      },
-      { merge: true }
-    );
+      tx.set(
+        memberDocRef,
+        {
+          id: memberId,
+          companyId,
+          email: memberEmail,
+          role: finalRole,
+          invitedBy: before?.invitedBy || callerEmail,
+          assignedSupervisor,
+          workerSubRole: workerSubRole || null,
+          referralCode: invitePlaceholder?.code || null,
+          inviteLink: invitePlaceholder?.link || null,
+          status: "invited",
+          temporary: isTemporary || false,
+          expiresAt: invitePlaceholder ? expiresAt : null,
+          createdAt: before?.createdAt || timestamp,
+          updatedAt: timestamp,
+        },
+        { merge: true }
+      );
+    });
 
     await logAuditEntry({
       companyId,
-      action: exists.exists ? "update" : "create",
+      action: alreadyExists ? "update" : "create",
       collection: "members",
       documentId: memberId,
       userId: callerEmail,
