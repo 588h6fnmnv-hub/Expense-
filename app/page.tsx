@@ -2449,16 +2449,6 @@ export default function Home() {
     [company?.role, employeeSession]
   );
 
-  useEffect(() => {
-    if (status !== "loading") {
-      console.log("[Auth] Diagnostic Log:");
-      console.log("- Session Email:", sessionEmail);
-      console.log("- Resolved Company ID:", company?.id || "None");
-      console.log("- Member Role:", accessContext.role);
-      console.log("- Company Doc Exists:", company ? "Yes" : "No");
-      console.log("- Employee Session:", employeeSession ? "Yes" : "No");
-    }
-  }, [status, sessionEmail, company, accessContext.role, employeeSession]);
   const canViewFinance = canAccess(accessContext, "finance:read");
   const canWriteTransactions = canAccess(accessContext, "transactions:write");
   const canManageSites = canAccess(accessContext, "sites:write");

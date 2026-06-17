@@ -61,6 +61,20 @@ const refreshGoogleAccessToken = async (token: JWT): Promise<JWT> => {
 };
 
 export const authOptions: NextAuthOptions = {
+  debug: process.env.NODE_ENV === "development",
+  logger: {
+    error(code, metadata) {
+      console.error(`[next-auth][error][${code}]`, metadata);
+    },
+    warn(code) {
+      console.warn(`[next-auth][warn][${code}]`);
+    },
+    debug(code, metadata) {
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[next-auth][debug][${code}]`, metadata);
+      }
+    },
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

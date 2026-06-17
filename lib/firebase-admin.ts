@@ -9,12 +9,17 @@ export const isFirebaseAdminConfigured = Boolean(
   projectId && clientEmail && privateKey
 );
 
+if (!isFirebaseAdminConfigured && process.env.NODE_ENV === "production") {
+  console.warn("[firebase-admin] Missing credentials for production. Admin SDK will not be initialized.");
+}
+
 let adminDb: ReturnType<typeof getFirestore> | null = null;
 
 export const getAdminDb = () => {
   if (adminDb) return adminDb;
 
   if (!isFirebaseAdminConfigured) {
+    console.warn("[firebase-admin] Attempted to get Admin DB without configuration.");
     return null;
   }
 
