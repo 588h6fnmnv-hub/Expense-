@@ -109,7 +109,7 @@ export async function POST(request: Request) {
 
     const role = normalizeRole(body.role);
     if (!role) return jsonError("role is invalid", 400);
-    if (role === "owner") return jsonError("Cannot assign owner role directly", 403);
+    if ((role as string) === "owner") return jsonError("Cannot assign owner role directly", 403);
 
     const workerSubRole =
       role === "worker" ? normalizeWorkerSubRole(body.workerSubRole) : undefined;
@@ -139,8 +139,9 @@ export async function POST(request: Request) {
       before = snap.exists ? (snap.data() as Record<string, unknown>) : null;
 
       // Demotion protection: Never allow an Admin (or other role) to demote a company Owner.
-      // Roles like accountant/manager might be able to create members but not demote owners.
-      if (before?.role === "owner" && role !== "owner") {
+      // Since 'role' is already guaranteed not to be 'owner' by a guard above, we only
+      // need to check if the existing member is an owner to block the demotion.
+      if (before?.role === "owner") {
         throw Object.assign(new Error("Cannot demote the company owner"), { status: 403 });
       }
 
