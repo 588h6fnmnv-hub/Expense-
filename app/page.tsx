@@ -1970,6 +1970,14 @@ export default function Home() {
   const [supplierBills] = useState<SupplierBill[]>([]);
   const [attendance] = useState<Attendance[]>([]);
   const [payrollRuns] = useState<PayrollRun[]>([]);
+
+  // Defensive copies with fallbacks
+  const safeInvoices = invoices ?? [];
+  const safeSupplierBills = supplierBills ?? [];
+  const safeAttendance = attendance ?? [];
+  const safePayrollRuns = payrollRuns ?? [];
+  const safeCustomers = customers ?? [];
+  const safeSuppliers = suppliers ?? [];
   const [accountBalances, setAccountBalances] = useState<AccountBalances>(
     emptyAccountBalances()
   );
@@ -1997,6 +2005,7 @@ export default function Home() {
   const sessionEmail = session?.user?.email || "";
   const sessionName = session?.user?.name || sessionEmail;
   const walletStorageUser = employeeSession?.ownerUser || savedUser;
+
 
   const applyWalletData = useCallback((wallet: WalletData) => {
     const normalizedWallet = normalizeWalletData(wallet);
@@ -2439,6 +2448,17 @@ export default function Home() {
       }),
     [company?.role, employeeSession]
   );
+
+  useEffect(() => {
+    if (status !== "loading") {
+      console.log("[Auth] Diagnostic Log:");
+      console.log("- Session Email:", sessionEmail);
+      console.log("- Resolved Company ID:", company?.id || "None");
+      console.log("- Member Role:", accessContext.role);
+      console.log("- Company Doc Exists:", company ? "Yes" : "No");
+      console.log("- Employee Session:", employeeSession ? "Yes" : "No");
+    }
+  }, [status, sessionEmail, company, accessContext.role, employeeSession]);
   const canViewFinance = canAccess(accessContext, "finance:read");
   const canWriteTransactions = canAccess(accessContext, "transactions:write");
   const canManageSites = canAccess(accessContext, "sites:write");
@@ -2446,27 +2466,27 @@ export default function Home() {
     accessContext.role === "owner" || accessContext.role === "admin";
   const canViewSettings = canAccess(accessContext, "settings:read");
   const visibleProjects = useMemo(
-    () => filterProjectsForAccess(projects, accessContext),
+    () => filterProjectsForAccess(projects ?? [], accessContext),
     [projects, accessContext]
   );
   const visibleWorkers = useMemo(
-    () => filterWorkersForAccess(personAccounts, accessContext),
+    () => filterWorkersForAccess(personAccounts ?? [], accessContext),
     [personAccounts, accessContext]
   );
   const visibleTransactions = useMemo(
-    () => filterTransactionsForAccess(transactions, accessContext),
+    () => filterTransactionsForAccess(transactions ?? [], accessContext),
     [transactions, accessContext]
   );
   const visibleMaterials = useMemo(
-    () => filterMaterialsForAccess(materials, accessContext),
+    () => filterMaterialsForAccess(materials ?? [], accessContext),
     [materials, accessContext]
   );
   const visibleReminders = useMemo(
-    () => filterRemindersForAccess(reminders, accessContext),
+    () => filterRemindersForAccess(reminders ?? [], accessContext),
     [reminders, accessContext]
   );
   const visibleDailyReports = useMemo(
-    () => filterDailyReportsForAccess(dailyReports, accessContext),
+    () => filterDailyReportsForAccess(dailyReports ?? [], accessContext),
     [dailyReports, accessContext]
   );
   const selectedMonthTransactions = useMemo(
@@ -2497,18 +2517,18 @@ export default function Home() {
     [cards]
   );
 
-  const selectedMonthExternalTransactions = selectedMonthTransactions.filter(
-    (tx) => !isTransferTransaction(tx)
+  const selectedMonthExternalTransactions = (selectedMonthTransactions ?? []).filter(
+    (tx) => tx && !isTransferTransaction(tx)
   );
   const accountMonthIncome = selectedMonthExternalTransactions
     .filter(isMoneyIn)
-    .reduce((total, tx) => total + tx.amount, 0);
+    .reduce((total, tx) => total + (tx.amount || 0), 0);
   const accountMonthSpent = selectedMonthExternalTransactions
     .filter(isMoneyOut)
-    .reduce((total, tx) => total + tx.amount, 0);
+    .reduce((total, tx) => total + (tx.amount || 0), 0);
 
-  const accountCurrent = ledgerAccounts.reduce(
-    (total, account) => total + account.amount,
+  const accountCurrent = (ledgerAccounts ?? []).reduce(
+    (total, account) => total + (account.amount || 0),
     0
   );
   const currentMonth = monthKey();
@@ -2516,47 +2536,59 @@ export default function Home() {
 
   const reportAccounts = useMemo<ReportAccount[]>(
     () =>
-      ledgerAccounts.map((account) => ({
+      (ledgerAccounts ?? []).map((account) => ({
         ...account,
-        transactions: account.transactions.filter(
-          (tx) => transactionMonth(tx) === selectedMonth
+        transactions: (account.transactions || []).filter(
+          (tx) => tx && transactionMonth(tx) === selectedMonth
         ),
       })),
     [ledgerAccounts, selectedMonth]
   );
   const dataHealthWarnings = useMemo(() => {
     const warnings: string[] = [];
-    const siteIds = new Set(projects.map((project) => project.id));
+    const safeProjects = projects ?? [];
+    const safeTransactions = transactions ?? [];
+    const safeMaterials = materials ?? [];
+    const safeWorkers = personAccounts ?? [];
+    const safeCards = cards ?? [];
 
-    const unlinkedTransactions = transactions.filter(
+    const siteIds = new Set(safeProjects.map((project) => project.id));
+
+    const unlinkedTransactions = safeTransactions.filter(
       (tx) =>
-        (tx.type === "Expense" || tx.type === "Income" || tx.type === "Pay In" || tx.type === "Pay Out") &&
+        tx && (tx.type === "Expense" || tx.type === "Income" || tx.type === "Pay In" || tx.type === "Pay Out") &&
         !tx.projectId
     ).length;
     if (unlinkedTransactions) warnings.push(`${unlinkedTransactions} transaction(s) have no site selected.`);
 
-    const materialsWithoutSupplier = materials.filter((material) => !material.supplier).length;
+    const materialsWithoutSupplier = safeMaterials.filter((material) => material && !material.supplier).length;
     if (materialsWithoutSupplier) warnings.push(`${materialsWithoutSupplier} material item(s) have no supplier.`);
 
-    const workersWithoutSite = personAccounts.filter((worker) => !worker.projectId || !siteIds.has(worker.projectId)).length;
+    const workersWithoutSite = safeWorkers.filter((worker) => worker && (!worker.projectId || !siteIds.has(worker.projectId))).length;
     if (workersWithoutSite) warnings.push(`${workersWithoutSite} worker(s) have no valid assigned site.`);
 
-    const creditCardsWithoutRepayDay = cards.filter(
-      (card) => card.cardType === "Credit" && !card.repaymentDay
+    const creditCardsWithoutRepayDay = safeCards.filter(
+      (card) => card && card.cardType === "Credit" && !card.repaymentDay
     ).length;
     if (creditCardsWithoutRepayDay) warnings.push(`${creditCardsWithoutRepayDay} credit card(s) need repayment day.`);
 
-    const duplicateCount = transactions.filter((tx, index) =>
-      Boolean(findPossibleDuplicateTransaction(tx, transactions.slice(0, index)))
+    const duplicateCount = safeTransactions.filter((tx, index) =>
+      tx && Boolean(findPossibleDuplicateTransaction(tx, safeTransactions.slice(0, index)))
     ).length;
     if (duplicateCount) warnings.push(`${duplicateCount} transaction(s) look like possible duplicates.`);
 
     return warnings;
   }, [cards, materials, personAccounts, projects, transactions]);
   const dashboardKpis = useMemo(() => {
-    const pendingCustomerAmount = visibleProjects.reduce((total, project) => {
-      const income = visibleTransactions
-        .filter((tx) => tx.projectId === project.id && isMoneyIn(tx))
+    const safeVisibleProjects = visibleProjects ?? [];
+    const safeVisibleTransactions = visibleTransactions ?? [];
+    const safeVisibleWorkers = visibleWorkers ?? [];
+    const safeVisibleMaterials = visibleMaterials ?? [];
+
+    const pendingCustomerAmount = safeVisibleProjects.reduce((total, project) => {
+      if (!project) return total;
+      const income = safeVisibleTransactions
+        .filter((tx) => tx && tx.projectId === project.id && isMoneyIn(tx))
         .reduce((sum, tx) => sum + tx.amount, 0);
       const extras = (project.extras || []).reduce(
         (sum, extra) => sum + extra.amount,
@@ -2564,7 +2596,8 @@ export default function Home() {
       );
       return total + Math.max(project.budget + extras - income, 0);
     }, 0);
-    const workerPayable = visibleWorkers.reduce((total, worker) => {
+    const workerPayable = safeVisibleWorkers.reduce((total, worker) => {
+      if (!worker) return total;
       const opening = worker.direction === "Payable" ? -worker.amount : worker.amount;
       const entries = (worker.entries || []).reduce(
         (sum, entry) =>
@@ -2574,15 +2607,17 @@ export default function Home() {
       const balance = opening + entries;
       return balance < 0 ? total + Math.abs(balance) : total;
     }, 0);
-    const materialStockValue = visibleMaterials.reduce(
+    const materialStockValue = safeVisibleMaterials.reduce(
       (total, material) =>
-        total +
-        Math.max(0, material.quantity - (material.usedQuantity || 0)) * material.rate,
+        material
+          ? total + Math.max(0, material.quantity - (material.usedQuantity || 0)) * material.rate
+          : total,
       0
     );
-    const rankedSites = visibleProjects
+    const rankedSites = safeVisibleProjects
       .map((project) => {
-        const siteTx = visibleTransactions.filter((tx) => tx.projectId === project.id);
+        if (!project) return { name: "Unknown", profit: 0 };
+        const siteTx = safeVisibleTransactions.filter((tx) => tx && tx.projectId === project.id);
         const income = siteTx.filter(isMoneyIn).reduce((sum, tx) => sum + tx.amount, 0);
         const expense = siteTx.filter(isMoneyOut).reduce((sum, tx) => sum + tx.amount, 0);
         return { name: project.name, profit: income - expense };
@@ -4006,18 +4041,18 @@ export default function Home() {
           <TabErrorBoundary name="People">
             <div className="space-y-8">
               <PeopleDashboard
-                customers={customers}
-                suppliers={suppliers}
+                customers={safeCustomers}
+                suppliers={safeSuppliers}
                 theme={theme}
-                onCreateCustomer={(c) => setCustomers(curr => [...curr, { ...c, id: uid() }])}
-                onCreateSupplier={(s) => setSuppliers(curr => [...curr, { ...s, id: uid() }])}
+                onCreateCustomer={(c) => setCustomers(curr => [...(curr ?? []), { ...c, id: uid() }])}
+                onCreateSupplier={(s) => setSuppliers(curr => [...(curr ?? []), { ...s, id: uid() }])}
               />
 
               <WorkersTab
-                workers={visibleWorkers}
-                projects={visibleProjects}
-                transactions={visibleTransactions}
-                dailyReports={visibleDailyReports}
+                workers={visibleWorkers ?? []}
+                projects={visibleProjects ?? []}
+                transactions={visibleTransactions ?? []}
+                dailyReports={visibleDailyReports ?? []}
                 companyName={company?.name || "Business"}
                 accessRole={accessContext.role}
                 canManageWorkers={canManageWorkers}
@@ -4031,8 +4066,8 @@ export default function Home() {
                 onDeleteEntry={deleteWorkerEntry}
               />
 
-              <AttendanceTracker attendance={attendance} theme={theme} />
-              <PayrollSummary payrollRuns={payrollRuns} theme={theme} />
+              <AttendanceTracker attendance={safeAttendance} theme={theme} />
+              <PayrollSummary payrollRuns={safePayrollRuns} theme={theme} />
             </div>
           </TabErrorBoundary>
         )}
@@ -4043,20 +4078,20 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'}`}>
                     <h3 className="text-sm font-bold opacity-50 uppercase mb-2">Accounts Receivable</h3>
-                    <p className="text-3xl font-black text-emerald-500">₹{invoices.reduce((s, i) => s + (i.status !== 'Paid' ? i.total : 0), 0).toLocaleString('en-IN')}</p>
+                    <p className="text-3xl font-black text-emerald-500">₹{safeInvoices.reduce((s, i) => s + (i && i.status !== 'Paid' ? (i.total || 0) : 0), 0).toLocaleString('en-IN')}</p>
                  </div>
                  <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'}`}>
                     <h3 className="text-sm font-bold opacity-50 uppercase mb-2">Accounts Payable</h3>
-                    <p className="text-3xl font-black text-danger-red">₹{supplierBills.reduce((s, i) => s + (i.status !== 'Paid' ? i.total : 0), 0).toLocaleString('en-IN')}</p>
+                    <p className="text-3xl font-black text-danger-red">₹{safeSupplierBills.reduce((s, i) => s + (i && i.status !== 'Paid' ? (i.total || 0) : 0), 0).toLocaleString('en-IN')}</p>
                  </div>
               </div>
 
               <FinancialReports theme={theme} />
 
               <MaterialTracker
-                materials={visibleMaterials}
-                projects={visibleProjects}
-                reminders={visibleReminders}
+                materials={visibleMaterials ?? []}
+                projects={visibleProjects ?? []}
+                reminders={visibleReminders ?? []}
                 onCreateMaterial={createMaterial}
                 onUpdateMaterial={updateMaterial}
                 onDeleteMaterial={deleteMaterial}
@@ -4067,20 +4102,20 @@ export default function Home() {
                 selectedMonthLabel={formatMonth(selectedMonth)}
                 selectedMonthKey={selectedMonth}
                 canShowNextMonth={canShowNextMonth}
-                accounts={reportAccounts}
-                reportTransactions={reportTransactions}
+                accounts={reportAccounts ?? []}
+                reportTransactions={reportTransactions ?? []}
                 totalBalance={accountCurrent}
-                projects={visibleProjects}
-                materials={visibleMaterials}
-                workers={visibleWorkers}
+                projects={visibleProjects ?? []}
+                materials={visibleMaterials ?? []}
+                workers={visibleWorkers ?? []}
                 company={company}
                 onPreviousMonth={() => setSelectedMonth(moveMonth(selectedMonth, -1))}
                 onNextMonth={() => setSelectedMonth(moveMonth(selectedMonth, 1))}
               />
 
               <ReminderCenter
-                reminders={visibleReminders}
-                projects={visibleProjects}
+                reminders={visibleReminders ?? []}
+                projects={visibleProjects ?? []}
                 onCreateReminder={createReminder}
                 onUpdateReminder={updateReminder}
                 onDeleteReminder={deleteReminder}
@@ -4092,12 +4127,12 @@ export default function Home() {
         {tab === "Sites" && (
           <TabErrorBoundary name="Sites">
           <SitesView
-            projects={visibleProjects}
-            transactions={visibleTransactions}
-            materials={visibleMaterials}
-            reminders={visibleReminders}
-            workers={visibleWorkers}
-            dailyReports={visibleDailyReports}
+            projects={visibleProjects ?? []}
+            transactions={visibleTransactions ?? []}
+            materials={visibleMaterials ?? []}
+            reminders={visibleReminders ?? []}
+            workers={visibleWorkers ?? []}
+            dailyReports={visibleDailyReports ?? []}
             company={company}
             canManageSites={canManageSites}
             onCreateSite={(site) => {
@@ -4165,14 +4200,14 @@ export default function Home() {
           <SettingsView
             company={company}
             wallet={currentWalletData}
-            projectsCount={projects.length}
-            workersCount={personAccounts.length}
-            materialsCount={materials.length}
-            cards={cards}
+            projectsCount={projects?.length || 0}
+            workersCount={personAccounts?.length || 0}
+            materialsCount={materials?.length || 0}
+            cards={cards ?? []}
             cardDraft={cardDraft}
-            employeeInvites={employeeInvites}
-            workers={personAccounts}
-            projects={projects}
+            employeeInvites={employeeInvites ?? []}
+            workers={personAccounts ?? []}
+            projects={projects ?? []}
             activityLog={activityLog}
             dataHealthWarnings={dataHealthWarnings}
             isImportingEmail={isImportingEmail}

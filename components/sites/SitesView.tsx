@@ -218,6 +218,13 @@ export default function SitesView({
     });
   };
 
+  const safeProjects = projects || [];
+  const safeTransactions = transactions || [];
+  const safeMaterials = materials || [];
+  const safeReminders = reminders || [];
+  const safeWorkers = workers || [];
+  const safeDailyReports = dailyReports || [];
+
   return (
     <div className="space-y-4">
       <div className="rounded-[28px] bg-white/80 p-5 shadow-xl dark:bg-white/5">
@@ -286,20 +293,21 @@ export default function SitesView({
         )}
       </div>
 
-      {projects.map((project) => {
-        const projectTransactions = transactions.filter(
-          (tx) => isProjectLinkedTransaction(tx, project.id)
+      {safeProjects.map((project) => {
+        if (!project) return null;
+        const projectTransactions = safeTransactions.filter(
+          (tx) => tx && isProjectLinkedTransaction(tx, project.id)
         );
         const projectIncomeTransactions = projectTransactions.filter(isMoneyIn);
         const incomeReceived = projectIncomeTransactions.reduce(
-          (total, tx) => total + tx.amount,
+          (total, tx) => total + (tx.amount || 0),
           0
         );
         const materialExpenseTransactions = projectTransactions.filter(
           (tx) => isMoneyOut(tx) && isMaterialExpense(tx)
         );
         const materialTransactionCost = materialExpenseTransactions.reduce(
-          (total, tx) => total + tx.amount,
+          (total, tx) => total + (tx.amount || 0),
           0
         );
         const directExpenses = projectTransactions
@@ -307,26 +315,27 @@ export default function SitesView({
             (tx) =>
               isMoneyOut(tx) && !isWorkerPayment(tx) && !isMaterialExpense(tx)
           )
-          .reduce((total, tx) => total + tx.amount, 0);
-        const projectMaterials = materials.filter(
-          (material) => material.projectId === project.id
+          .reduce((total, tx) => total + (tx.amount || 0), 0);
+        const projectMaterials = safeMaterials.filter(
+          (material) => material && material.projectId === project.id
         );
         const materialInventoryCost = projectMaterials.reduce(
-          (total, material) => total + materialUsedValue(material),
+          (total, material) => total + (materialUsedValue(material) || 0),
           0
         );
         const materialCost = Math.max(materialInventoryCost, materialTransactionCost);
         const transactionWorkerPayments = projectTransactions
           .filter((tx) => isMoneyOut(tx) && isWorkerPayment(tx))
-          .reduce((total, tx) => total + tx.amount, 0);
+          .reduce((total, tx) => total + (tx.amount || 0), 0);
         const workerPaymentTransactions = projectTransactions.filter(
           (tx) => isMoneyOut(tx) && isWorkerPayment(tx)
         );
-        const ledgerWorkerPaymentRows = workers.flatMap((worker) =>
-          (worker.entries || [])
+        const ledgerWorkerPaymentRows = safeWorkers.flatMap((worker) => {
+          if (!worker) return [];
+          return (worker.entries || [])
             .filter(
               (entry) =>
-                entry.projectId === project.id && entry.direction === "Debit"
+                entry && entry.projectId === project.id && entry.direction === "Debit"
             )
             .map((entry) => ({
               id: `${worker.id}-${entry.id}`,
@@ -334,28 +343,30 @@ export default function SitesView({
               date: entry.date,
               amount: entry.amount,
               narration: entry.narration,
-            }))
-        );
-        const ledgerWorkerPayments = workers.reduce(
-          (total, worker) =>
-            total +
+            }));
+        });
+        const ledgerWorkerPayments = safeWorkers.reduce(
+          (total, worker) => {
+            if (!worker) return total;
+            return total +
             (worker.entries || [])
               .filter(
                 (entry) =>
-                  entry.projectId === project.id && entry.direction === "Debit"
+                  entry && entry.projectId === project.id && entry.direction === "Debit"
               )
-              .reduce((entryTotal, entry) => entryTotal + entry.amount, 0),
+              .reduce((entryTotal, entry) => entryTotal + (entry.amount || 0), 0);
+          },
           0
         );
         const workerPayments = transactionWorkerPayments + ledgerWorkerPayments;
-        const projectReminders = reminders.filter(
-          (reminder) => reminder.projectId === project.id && !reminder.done
+        const projectReminders = safeReminders.filter(
+          (reminder) => reminder && reminder.projectId === project.id && !reminder.done
         );
-        const projectReports = dailyReports.filter(
-          (report) => report.projectId === project.id
+        const projectReports = safeDailyReports.filter(
+          (report) => report && report.projectId === project.id
         );
-        const projectWorkers = workers.filter(
-          (worker) => worker.projectId === project.id
+        const projectWorkers = safeWorkers.filter(
+          (worker) => worker && worker.projectId === project.id
         );
         const projectExpenses = projectTransactions.filter(isMoneyOut);
         const otherTransactions = projectTransactions.filter(
@@ -798,7 +809,7 @@ export default function SitesView({
         );
       })}
 
-      {projects.length === 0 && (
+      {safeProjects.length === 0 && (
         <div className="rounded-3xl bg-white/80 p-6 text-center text-sm font-bold text-neutral-500 shadow dark:bg-white/5">
           No sites yet. Add your first construction site.
         </div>

@@ -91,18 +91,20 @@ export default function ReminderCenter({
     () => new Map(projects.map((project) => [project.id, project.name])),
     [projects]
   );
-  const counts = reminders.reduce(
+  const counts = (reminders || []).reduce(
     (total, reminder) => {
-      total[reminderStatus(reminder, today)] += 1;
+      if (reminder) {
+        total[reminderStatus(reminder, today)] += 1;
+      }
       return total;
     },
     { today: 0, overdue: 0, upcoming: 0, done: 0 } as Record<ReminderFilter, number>
   );
-  const visibleReminders = reminders
-    .filter((reminder) => reminderStatus(reminder, today) === filter)
+  const visibleReminders = (reminders || [])
+    .filter((reminder) => reminder && reminderStatus(reminder, today) === filter)
     .sort((left, right) => dateKey(left.dueDate).localeCompare(dateKey(right.dueDate)));
-  const notificationReadyCount = reminders.filter(
-    (reminder) => !reminder.done && reminder.notificationReady
+  const notificationReadyCount = (reminders || []).filter(
+    (reminder) => reminder && !reminder.done && reminder.notificationReady
   ).length;
 
   const createReminder = () => {

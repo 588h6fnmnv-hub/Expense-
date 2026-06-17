@@ -77,7 +77,7 @@ export default function HomeDashboard({
   onDelete,
   onUpdate,
 }: HomeDashboardProps) {
-  const pendingReminders = reminders.filter((reminder) => !reminder.done);
+  const pendingReminders = (reminders || []).filter((reminder) => reminder && !reminder.done);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -188,15 +188,15 @@ export default function HomeDashboard({
         </div>
 
         <div className="bg-surface-charcoal border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
-          {transactions.slice(0, 10).map((tx) => (
-            <TransactionCard
+          {(transactions || []).slice(0, 10).map((tx) => (
+            tx && <TransactionCard
               key={tx.id}
               tx={tx}
               onDelete={onDelete}
               onUpdate={onUpdate}
             />
           ))}
-          {transactions.length === 0 && (
+          {(transactions || []).length === 0 && (
             <div className="p-6 text-center text-sm font-semibold text-neutral-500">
               No transactions yet. Add your first construction business entry.
             </div>

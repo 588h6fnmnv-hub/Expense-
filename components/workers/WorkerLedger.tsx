@@ -178,39 +178,48 @@ export default function WorkerLedger({
   const [reportDrafts, setReportDrafts] = useState<Record<string, ReportDraft>>({});
   const [activeWorkerId, setActiveWorkerId] = useState("");
 
+  const safeWorkers = useMemo(() => workers || [], [workers]);
+  const safeProjects = useMemo(() => projects || [], [projects]);
+  const safeTransactions = useMemo(() => transactions || [], [transactions]);
+  const safeDailyReports = useMemo(() => dailyReports || [], [dailyReports]);
+
   const projectNameById = useMemo(
-    () => new Map(projects.map((project) => [project.id, project.name])),
-    [projects]
+    () => new Map(safeProjects.map((project) => [project.id, project.name])),
+    [safeProjects]
   );
   const activeWorker =
-    workers.find((worker) => worker.id === activeWorkerId) || workers[0] || null;
-  const totalAdvance = workers.reduce((total, worker) => {
+    safeWorkers.find((worker) => worker && worker.id === activeWorkerId) || safeWorkers[0] || null;
+  const totalAdvance = safeWorkers.reduce((total, worker) => {
+    if (!worker) return total;
     const balance = workerBalance(worker);
     return balance > 0 ? total + balance : total;
   }, 0);
-  const totalPayable = workers.reduce((total, worker) => {
+  const totalPayable = safeWorkers.reduce((total, worker) => {
+    if (!worker) return total;
     const balance = workerBalance(worker);
     return balance < 0 ? total + Math.abs(balance) : total;
   }, 0);
-  const recentEntries = workers
-    .flatMap((worker) =>
-      (worker.entries || []).map((entry) => ({ ...entry, workerName: worker.name }))
-    )
+  const recentEntries = safeWorkers
+    .flatMap((worker) => {
+      if (!worker) return [];
+      return (worker.entries || []).map((entry) => ({ ...entry, workerName: worker.name }));
+    })
     .sort((left, right) => `${right.date} ${right.id}`.localeCompare(`${left.date} ${left.id}`))
     .slice(0, 4);
   const sitePayments = useMemo(() => {
     const bySite = new Map<string, number>();
 
-    workers.forEach((worker) => {
+    safeWorkers.forEach((worker) => {
+      if (!worker) return;
       (worker.entries || []).forEach((entry) => {
-        if (!entry.projectId || entry.direction !== "Debit") return;
-        bySite.set(entry.projectId, (bySite.get(entry.projectId) || 0) + entry.amount);
+        if (!entry || !entry.projectId || entry.direction !== "Debit") return;
+        bySite.set(entry.projectId, (bySite.get(entry.projectId) || 0) + (entry.amount || 0));
       });
     });
 
-    transactions.forEach((tx) => {
-      if (!tx.projectId || tx.category !== "👷 Worker Salary") return;
-      bySite.set(tx.projectId, (bySite.get(tx.projectId) || 0) + tx.amount);
+    safeTransactions.forEach((tx) => {
+      if (!tx || !tx.projectId || tx.category !== "👷 Worker Salary") return;
+      bySite.set(tx.projectId, (bySite.get(tx.projectId) || 0) + (tx.amount || 0));
     });
 
     return Array.from(bySite.entries())
@@ -220,7 +229,7 @@ export default function WorkerLedger({
         amount,
       }))
       .sort((left, right) => right.amount - left.amount);
-  }, [projectNameById, transactions, workers]);
+  }, [projectNameById, safeTransactions, safeWorkers]);
 
   const createWorker = () => {
     const name = workerDraft.name.trim();
@@ -447,7 +456,7 @@ export default function WorkerLedger({
         </div>
       )}
 
-      {workers.length === 0 && (
+      {safeWorkers.length === 0 && (
         <div className="liquid-surface text-neutral-950 rounded-[26px] p-6 text-center">
           <p className="font-black">No workers yet</p>
           <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -456,10 +465,11 @@ export default function WorkerLedger({
         </div>
       )}
 
-      {workers.length > 0 && (
+      {safeWorkers.length > 0 && (
         <>
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {workers.map((worker) => {
+            {safeWorkers.map((worker) => {
+              if (!worker) return null;
               const balance = workerBalance(worker);
               const copy = balanceCopy(balance);
               const selected = activeWorker?.id === worker.id;
@@ -493,7 +503,7 @@ export default function WorkerLedger({
           {activeWorker && (
             <WorkerCard
               worker={activeWorker}
-              projects={projects}
+              projects={safeProjects}
               projectNameById={projectNameById}
               entryDraft={entryDrafts[activeWorker.id] || newEntryDraft()}
               onEntryDraftChange={(patch) =>
@@ -517,9 +527,9 @@ export default function WorkerLedger({
             <DailyReportsPanel
               companyName={companyName}
               worker={activeWorker}
-              projects={projects}
+              projects={safeProjects}
               projectNameById={projectNameById}
-              dailyReports={dailyReports}
+              dailyReports={safeDailyReports}
               reportDraft={reportDrafts[activeWorker.id] || newReportDraft(activeWorker)}
               onReportDraftChange={(patch) =>
                 setReportDrafts((current) => ({

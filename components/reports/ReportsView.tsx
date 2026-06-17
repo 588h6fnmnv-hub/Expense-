@@ -100,20 +100,26 @@ export default function ReportsView({
   const [analyticsCategoryFilter, setAnalyticsCategoryFilter] = useState<
     ExpenseAnalyticsCategory | "All"
   >("All");
-  const monthlyIncome = reportTransactions
+  const safeReportTransactions = useMemo(() => reportTransactions || [], [reportTransactions]);
+  const safeProjects = useMemo(() => projects || [], [projects]);
+  const safeMaterials = useMemo(() => materials || [], [materials]);
+  const safeWorkers = useMemo(() => workers || [], [workers]);
+
+  const monthlyIncome = safeReportTransactions
     .filter(isMoneyIn)
-    .reduce((total, tx) => total + tx.amount, 0);
-  const monthlyExpense = reportTransactions
+    .reduce((total, tx) => total + (tx.amount || 0), 0);
+  const monthlyExpense = safeReportTransactions
     .filter(isMoneyOut)
-    .reduce((total, tx) => total + tx.amount, 0);
+    .reduce((total, tx) => total + (tx.amount || 0), 0);
   const netTotal = monthlyIncome - monthlyExpense;
-  const materialInventoryValue = materials.reduce(
-    (total, material) => total + materialValue(material),
+  const materialInventoryValue = safeMaterials.reduce(
+    (total, material) => total + (materialValue(material) || 0),
     0
   );
   const categoryAnalytics = useMemo(() => {
-    const expenseTransactions = reportTransactions.filter(isMoneyOut);
+    const expenseTransactions = safeReportTransactions.filter(isMoneyOut);
     const filteredExpenses = expenseTransactions.filter((tx) => {
+      if (!tx) return false;
       const category = normalizeExpenseAnalyticsCategory(tx.category);
       const matchesSite =
         analyticsSiteFilter === "All" || tx.projectId === analyticsSiteFilter;
@@ -122,7 +128,7 @@ export default function ReportsView({
 
       return matchesSite && matchesCategory;
     });
-    const total = filteredExpenses.reduce((sum, tx) => sum + tx.amount, 0);
+    const total = filteredExpenses.reduce((sum, tx) => sum + (tx.amount || 0), 0);
     const rows = EXPENSE_ANALYTICS_CATEGORIES.map((category) => {
       const transactions = filteredExpenses.filter(
         (tx) => normalizeExpenseAnalyticsCategory(tx.category) === category
@@ -147,35 +153,39 @@ export default function ReportsView({
         .sort((left, right) => `${right.date} ${right.time || ""}`.localeCompare(`${left.date} ${left.time || ""}`))
         .slice(0, 8),
     };
-  }, [analyticsCategoryFilter, analyticsSiteFilter, reportTransactions]);
-  const siteReports = projects.map((project) => {
-    const siteTransactions = reportTransactions.filter(
-      (tx) => tx.projectId === project.id
+  }, [analyticsCategoryFilter, analyticsSiteFilter, safeReportTransactions]);
+  const siteReports = safeProjects.map((project) => {
+    if (!project) return null;
+    const siteTransactions = safeReportTransactions.filter(
+      (tx) => tx && tx.projectId === project.id
     );
     const income = siteTransactions
       .filter(isMoneyIn)
-      .reduce((total, tx) => total + tx.amount, 0);
+      .reduce((total, tx) => total + (tx.amount || 0), 0);
     const expense = siteTransactions
       .filter(isMoneyOut)
-      .reduce((total, tx) => total + tx.amount, 0);
+      .reduce((total, tx) => total + (tx.amount || 0), 0);
     const extras = (project.extras || []).reduce(
-      (total, extra) => total + extra.amount,
+      (total, extra) => total + (extra?.amount || 0),
       0
     );
-    const siteMaterials = materials.filter(
-      (material) => material.projectId === project.id
+    const siteMaterials = safeMaterials.filter(
+      (material) => material && material.projectId === project.id
     );
-    const workerPaid = workers.reduce(
-      (total, worker) =>
-        total +
+    const workerPaid = safeWorkers.reduce(
+      (total, worker) => {
+        if (!worker) return total;
+        return total +
         (worker.entries || [])
           .filter(
             (entry) =>
+              entry &&
               entry.projectId === project.id &&
               entry.direction === "Debit" &&
               entry.date.startsWith(selectedMonthKey)
           )
-          .reduce((entryTotal, entry) => entryTotal + entry.amount, 0),
+          .reduce((entryTotal, entry) => entryTotal + (entry.amount || 0), 0);
+      },
       0
     );
 
@@ -195,16 +205,17 @@ export default function ReportsView({
       workerPaid,
     };
   });
-  const workerReports = workers.map((worker) => {
+  const workerReports = safeWorkers.map((worker) => {
+    if (!worker) return null;
     const entries = (worker.entries || []).filter((entry) =>
-      entry.date.startsWith(selectedMonthKey)
+      entry && entry.date.startsWith(selectedMonthKey)
     );
     const paid = entries
-      .filter((entry) => entry.direction === "Debit")
-      .reduce((total, entry) => total + entry.amount, 0);
+      .filter((entry) => entry && entry.direction === "Debit")
+      .reduce((total, entry) => total + (entry.amount || 0), 0);
     const due = entries
-      .filter((entry) => entry.direction === "Credit")
-      .reduce((total, entry) => total + entry.amount, 0);
+      .filter((entry) => entry && entry.direction === "Credit")
+      .reduce((total, entry) => total + (entry.amount || 0), 0);
     const balance = workerBalance(worker);
 
     return {
@@ -216,13 +227,14 @@ export default function ReportsView({
       rows: entries.length,
     };
   });
-  const accountReports = accounts.map((account) => {
-    const income = account.transactions
+  const accountReports = (accounts || []).map((account) => {
+    if (!account) return null;
+    const income = (account.transactions || [])
       .filter(isMoneyIn)
-      .reduce((total, tx) => total + tx.amount, 0);
-    const expense = account.transactions
+      .reduce((total, tx) => total + (tx?.amount || 0), 0);
+    const expense = (account.transactions || [])
       .filter(isMoneyOut)
-      .reduce((total, tx) => total + tx.amount, 0);
+      .reduce((total, tx) => total + (tx?.amount || 0), 0);
 
     return {
       ...account,
@@ -256,7 +268,7 @@ export default function ReportsView({
 
     autoTable(doc, {
       head: [["Site", "Budget", "Income", "Expense", "P/L", "Worker Pay"]],
-      body: siteReports.map((site) => [
+      body: siteReports.filter((s): s is NonNullable<typeof s> => !!s).map((site) => [
         site.name,
         rupee(site.budget),
         rupee(site.income),
@@ -268,7 +280,7 @@ export default function ReportsView({
 
     autoTable(doc, {
       head: [["Worker", "Paid", "Due/Adj", "Balance", "Rows"]],
-      body: workerReports.map((worker) => [
+      body: workerReports.filter((w): w is NonNullable<typeof w> => !!w).map((worker) => [
         worker.name,
         rupee(worker.paid),
         rupee(worker.due),
@@ -279,7 +291,7 @@ export default function ReportsView({
 
     autoTable(doc, {
       head: [["Account", "Income", "Expense", "Net", "Balance"]],
-      body: accountReports.map((account) => [
+      body: accountReports.filter((a): a is NonNullable<typeof a> => !!a).map((account) => [
         account.label,
         rupee(account.income),
         rupee(account.expense),
@@ -294,7 +306,7 @@ export default function ReportsView({
     const rows = [
       ["Section", "Name", "Metric 1", "Metric 2", "Metric 3", "Metric 4"],
       ["Monthly", "Income", monthlyIncome, "Expense", monthlyExpense, netTotal],
-      ...siteReports.map((site) => [
+      ...siteReports.filter((s): s is NonNullable<typeof s> => !!s).map((site) => [
         "Site",
         site.name,
         site.income,
@@ -302,7 +314,7 @@ export default function ReportsView({
         site.profit,
         site.workerPaid,
       ]),
-      ...workerReports.map((worker) => [
+      ...workerReports.filter((w): w is NonNullable<typeof w> => !!w).map((worker) => [
         "Worker",
         worker.name,
         worker.paid,
@@ -310,7 +322,7 @@ export default function ReportsView({
         worker.balance,
         worker.rows,
       ]),
-      ...accountReports.map((account) => [
+      ...accountReports.filter((a): a is NonNullable<typeof a> => !!a).map((account) => [
         "Account",
         account.label,
         account.income,
@@ -398,13 +410,13 @@ export default function ReportsView({
         <div className="rounded-3xl bg-white/80 p-4 text-neutral-950 shadow dark:bg-white/5">
           <p className="text-xs font-bold text-neutral-500">Transactions</p>
           <p className="mt-1 text-2xl font-black">
-            {reportTransactions.length}
+            {safeReportTransactions.length}
           </p>
         </div>
       </div>
 
       <ExpenseAnalyticsSection
-        projects={projects}
+        projects={safeProjects}
         siteFilter={analyticsSiteFilter}
         categoryFilter={analyticsCategoryFilter}
         total={categoryAnalytics.total}
@@ -416,13 +428,13 @@ export default function ReportsView({
       />
 
       <PayablesView
-        workers={workers}
-        materials={materials}
-        projects={projects}
+        workers={safeWorkers}
+        materials={safeMaterials}
+        projects={safeProjects}
       />
 
       <ReportSection title="Site-wise report">
-        {siteReports.map((site) => (
+        {siteReports.filter((s): s is NonNullable<typeof s> => !!s).map((site) => (
           <ReportCard
             key={site.id}
             title={site.name}
@@ -441,7 +453,7 @@ export default function ReportsView({
       </ReportSection>
 
       <ReportSection title="Worker-wise report">
-        {workerReports.map((worker) => (
+        {workerReports.filter((w): w is NonNullable<typeof w> => !!w).map((worker) => (
           <ReportCard
             key={worker.id}
             title={worker.name}
@@ -457,7 +469,7 @@ export default function ReportsView({
       </ReportSection>
 
       <ReportSection title="Account-wise report">
-        {accountReports.map((account) => (
+        {accountReports.filter((a): a is NonNullable<typeof a> => !!a).map((account) => (
           <ReportCard
             key={account.id}
             title={`${account.icon} ${account.label}`}

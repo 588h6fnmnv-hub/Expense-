@@ -76,14 +76,19 @@ export default function PayablesView({
   materials,
   projects,
 }: PayablesViewProps) {
-  const personPayables = workers.filter(
-    (worker) => worker.direction === "Payable" && worker.amount > 0
+  const safeWorkers = workers || [];
+  const safeMaterials = materials || [];
+  const safeProjects = projects || [];
+
+  const personPayables = safeWorkers.filter(
+    (worker) => worker && worker.direction === "Payable" && worker.amount > 0
   );
-  const workerSalaryPayables = workers
+  const workerSalaryPayables = safeWorkers
+    .filter(worker => !!worker)
     .map((worker) => ({ worker, balance: workerBalance(worker) }))
     .filter((item) => item.balance < 0);
-  const materialBills = materials
-    .filter((material) => materialValue(material) > 0)
+  const materialBills = safeMaterials
+    .filter((material) => material && materialValue(material) > 0)
     .sort((left, right) => materialValue(right) - materialValue(left));
 
   return (
@@ -107,7 +112,7 @@ export default function PayablesView({
             <div className="min-w-0">
               <p className="truncate text-sm font-black">{person.name}</p>
               <p className="text-xs font-bold text-neutral-500">
-                {projectName(projects, person.projectId)}
+                {projectName(safeProjects, person.projectId)}
                 {person.phone ? ` · ${person.phone}` : ""}
               </p>
             </div>
@@ -130,7 +135,7 @@ export default function PayablesView({
             <div className="min-w-0">
               <p className="truncate text-sm font-black">{worker.name}</p>
               <p className="text-xs font-bold text-neutral-500">
-                {worker.workerSubRole || "Worker"} · {projectName(projects, worker.projectId)}
+                {worker.workerSubRole || "Worker"} · {projectName(safeProjects, worker.projectId)}
               </p>
             </div>
             <p className="shrink-0 text-sm font-black text-red-500">
@@ -152,7 +157,7 @@ export default function PayablesView({
             <div className="min-w-0">
               <p className="truncate text-sm font-black">{material.name}</p>
               <p className="text-xs font-bold text-neutral-500">
-                {material.supplier || "No supplier"} · {projectName(projects, material.projectId)}
+                {material.supplier || "No supplier"} · {projectName(safeProjects, material.projectId)}
               </p>
             </div>
             <p className="shrink-0 text-sm font-black text-red-500">

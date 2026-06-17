@@ -78,56 +78,60 @@ export default function MaterialTracker({
   const [activeMaterialId, setActiveMaterialId] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<MaterialCategory | "All">("All");
   const projectNameById = useMemo(
-    () => new Map(projects.map((project) => [project.id, project.name])),
+    () => new Map((projects || []).map((project) => [project.id, project.name])),
     [projects]
   );
+  const safeMaterials = materials || [];
   const activeMaterial =
-    materials.find((material) => material.id === activeMaterialId) ||
-    materials.filter((material) =>
+    safeMaterials.find((material) => material.id === activeMaterialId) ||
+    safeMaterials.filter((material) =>
       categoryFilter === "All" ? true : (material.category || "Other") === categoryFilter
     )[0] ||
     null;
-  const filteredMaterials = materials.filter((material) =>
+  const filteredMaterials = safeMaterials.filter((material) =>
     categoryFilter === "All" ? true : (material.category || "Other") === categoryFilter
   );
-  const lowStockItems = materials.filter(isLowStock);
-  const remainingValue = materials.reduce(
-    (total, material) => total + remainingStock(material) * material.rate,
+  const lowStockItems = safeMaterials.filter(isLowStock);
+  const remainingValue = safeMaterials.reduce(
+    (total, material) => total + (remainingStock(material) || 0) * (material.rate || 0),
     0
   );
-  const usedValue = materials.reduce(
-    (total, material) => total + (material.usedQuantity || 0) * material.rate,
+  const usedValue = safeMaterials.reduce(
+    (total, material) => total + (material.usedQuantity || 0) * (material.rate || 0),
     0
   );
-  const siteLinkedCount = materials.filter((material) => material.projectId).length;
+  const siteLinkedCount = safeMaterials.filter((material) => material && material.projectId).length;
   const categoryReports = MATERIAL_CATEGORIES.map((category) => {
-    const items = materials.filter((material) => (material.category || "Other") === category);
+    const items = safeMaterials.filter((material) => material && (material.category || "Other") === category);
     return {
       category,
       count: items.length,
-      value: items.reduce((total, material) => total + remainingStock(material) * material.rate, 0),
+      value: items.reduce((total, material) => total + (remainingStock(material) || 0) * (material.rate || 0), 0),
       low: items.filter(isLowStock).length,
     };
   }).filter((item) => item.count > 0);
-  const siteCategoryUsage = projects
+  const siteCategoryUsage = (projects || [])
     .map((project) => {
-      const items = materials.filter((material) => material.projectId === project.id);
+      if (!project) return null;
+      const items = safeMaterials.filter((material) => material && material.projectId === project.id);
       return {
         id: project.id,
         name: project.name,
         categories: MATERIAL_CATEGORIES.map((category) => ({
           category,
           usedValue: items
-            .filter((material) => (material.category || "Other") === category)
-            .reduce((total, material) => total + (material.usedQuantity || 0) * material.rate, 0),
+            .filter((material) => material && (material.category || "Other") === category)
+            .reduce((total, material) => total + (material.usedQuantity || 0) * (material.rate || 0), 0),
         })).filter((item) => item.usedValue > 0),
       };
     })
-    .filter((site) => site.categories.length > 0);
+    .filter((site): site is NonNullable<typeof site> => !!site && site.categories.length > 0);
   const supplierGroups = Array.from(
-    materials.reduce((groups, material) => {
-      const supplier = material.supplier || "No supplier";
-      groups.set(supplier, [...(groups.get(supplier) || []), material]);
+    safeMaterials.reduce((groups, material) => {
+      if (material) {
+        const supplier = material.supplier || "No supplier";
+        groups.set(supplier, [...(groups.get(supplier) || []), material]);
+      }
       return groups;
     }, new Map<string, MaterialItem[]>())
   ).sort((left, right) => left[0].localeCompare(right[0]));

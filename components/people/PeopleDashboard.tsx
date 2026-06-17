@@ -44,8 +44,8 @@ export default function PeopleDashboard({
       {/* List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {activeTab === "Customers" ? (
-          customers.length > 0 ? (
-            customers.map((customer) => (
+          (customers || []).length > 0 ? (
+            (customers || []).map((customer) => (
               <div
                 key={customer.id}
                 className={`p-5 rounded-[2rem] border transition-all hover:scale-[1.02] ${
@@ -83,8 +83,8 @@ export default function PeopleDashboard({
             </div>
           )
         ) : (
-          suppliers.length > 0 ? (
-            suppliers.map((supplier) => (
+          (suppliers || []).length > 0 ? (
+            (suppliers || []).map((supplier) => (
               <div
                 key={supplier.id}
                 className={`p-5 rounded-[2rem] border transition-all hover:scale-[1.02] ${
