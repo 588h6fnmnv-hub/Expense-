@@ -120,6 +120,8 @@ export const authOptions: NextAuthOptions = {
         const googleProfile = profile as GoogleProfile;
         token.email = normalizeEmail(googleProfile.email) || token.email;
         token.emailVerified = googleProfile.email_verified === true;
+        token.name = googleProfile.name || token.name;
+        token.picture = googleProfile.picture || token.picture;
       }
 
       if (account) {
@@ -156,9 +158,20 @@ export const authOptions: NextAuthOptions = {
       // Never expose OAuth access/refresh tokens to React/browser code.
       session.accessTokenError = token.error;
       session.googleScope = token.scope;
-      if (session.user) {
+
+      // Always ensure session.user exists and has the email from the JWT
+      if (!session.user) {
+        session.user = {
+          email: normalizeEmail(token.email),
+          name: typeof token.name === "string" ? token.name : undefined,
+          image: typeof token.picture === "string" ? token.picture : undefined,
+        };
+      } else {
         session.user.email = normalizeEmail(token.email || session.user.email);
+        if (token.name) session.user.name = String(token.name);
+        if (token.picture) session.user.image = String(token.picture);
       }
+
       return session;
     },
   },
