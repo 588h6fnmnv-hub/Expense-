@@ -2189,7 +2189,15 @@ export default function Home() {
     setEmployeeSession(null);
     setSavedUser(googleEmail);
     setShowWelcome(false);
-  }, [sessionEmail, savedUser, registeredUsers]);
+
+    // If we're starting a fresh Google session, ensure we don't have stale local data
+    // that might prevent the profile creation screen from showing.
+    const localWallet = readLocalWallet(googleEmail);
+    if (!localWallet.profileName) {
+      setProfileName("");
+      setNameDraft(session?.user?.name || "");
+    }
+  }, [sessionEmail, savedUser, registeredUsers, session?.user?.name]);
 
   useEffect(() => {
     if (!sessionName || profileName) {
@@ -2805,6 +2813,25 @@ export default function Home() {
       }
     );
   };
+  const handleLogout = useCallback(async () => {
+    await signOut({ redirect: false });
+    localStorage.removeItem("username");
+    localStorage.removeItem("authMode");
+    writeEmployeeSession(null);
+    localStorage.removeItem("profileName");
+    setSavedUser("");
+    setEmployeeSession(null);
+    setProfileName("");
+    setNameDraft("");
+    setAcceptedTerms(false);
+    setLoginError("");
+    setShowWelcome(false);
+    setTab("Home");
+    setStorageStatus("local");
+    setWalletReady(false);
+    applyWalletData(emptyWalletData());
+  }, [applyWalletData]);
+
   const startEmployeeLogin = async () => {
     const code = inviteCodeDraft.trim().toUpperCase();
 
@@ -3831,24 +3858,7 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={async () => {
-                  await signOut({ redirect: false });
-                  localStorage.removeItem("username");
-                  localStorage.removeItem("authMode");
-                  writeEmployeeSession(null);
-                  localStorage.removeItem("profileName");
-                  setSavedUser("");
-                  setEmployeeSession(null);
-                  setProfileName("");
-                  setNameDraft("");
-                  setAcceptedTerms(false);
-                  setLoginError("");
-                  setShowWelcome(false);
-                  setTab("Home");
-                  setStorageStatus("local");
-                  setWalletReady(false);
-                  applyWalletData(emptyWalletData());
-                }}
+                onClick={handleLogout}
                 className="btn-hover-effect w-full h-12 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl font-body-md text-sm text-primary flex items-center justify-center gap-2"
               >
                 Use another Google account
@@ -3913,6 +3923,7 @@ export default function Home() {
         onSelect={(selectedTab) => setTab(selectedTab)}
         theme={theme}
         companyName={company?.name}
+        onLogout={handleLogout}
       />
 
       <DashboardHeader

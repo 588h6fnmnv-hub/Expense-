@@ -10,6 +10,7 @@ type SidebarProps = {
   onSelect: (tab: DashboardTab) => void;
   theme: ThemeMode;
   companyName?: string;
+  onLogout?: () => void;
 };
 
 type NavItem = {
@@ -48,6 +49,7 @@ export default function Sidebar({
   onSelect,
   theme,
   companyName,
+  onLogout,
 }: SidebarProps) {
   const initial = companyName ? companyName.charAt(0).toUpperCase() : "B";
 
@@ -115,7 +117,7 @@ export default function Sidebar({
           </div>
 
           {/* Navigation Sections */}
-          <nav className="space-y-6 pb-8">
+          <nav className="space-y-6 pb-4">
             <div>
               <h3 className="text-xs font-bold opacity-30 uppercase px-3 mb-2 tracking-widest">
                 Home
@@ -180,6 +182,21 @@ export default function Sidebar({
               </div>
             </div>
           </nav>
+
+          {onLogout && (
+            <div className="pt-4 border-t border-white/5 pb-8">
+              <button
+                onClick={() => {
+                  onLogout();
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:bg-red-500/10 text-red-500"
+              >
+                <span className="material-symbols-outlined">logout</span>
+                <span className="text-sm font-bold">Logout</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>
