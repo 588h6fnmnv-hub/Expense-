@@ -113,6 +113,10 @@ export const authOptions: NextAuthOptions = {
 
       // OAuth users must have a Google-verified email. This is the equivalent
       // of email verification for this app because password auth is not used.
+      console.log("PROFILE", profile);
+      console.log("EMAIL", email);
+      console.log("VERIFIED", verified);
+
       return Boolean(email && verified);
     },
     async jwt({ token, account, profile }) {
