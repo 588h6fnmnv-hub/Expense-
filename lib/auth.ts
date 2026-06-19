@@ -83,20 +83,26 @@ export const authOptions: NextAuthOptions = {
         idToken: { label: "ID Token", type: "text" },
       },
       async authorize(credentials) {
+        console.log("[Auth] authorize start", { hasIdToken: !!credentials?.idToken });
         if (!credentials?.idToken) return null;
 
         const adminAuth = getAdminAuth();
-        if (!adminAuth) return null;
+        if (!adminAuth) {
+          console.error("[Auth] authorize failed: getAdminAuth returned null");
+          return null;
+        }
 
         try {
           const decodedToken = await adminAuth.verifyIdToken(credentials.idToken);
+          console.log("[Auth] authorize success", { uid: decodedToken.uid, email: decodedToken.email });
           return {
             id: decodedToken.uid,
             email: normalizeEmail(decodedToken.email),
             name: (decodedToken.name as string) || decodedToken.email,
             image: (decodedToken.picture as string) || undefined,
           };
-        } catch {
+        } catch (error: any) {
+          console.error("[Auth] authorize error:", error.message || error);
           return null;
         }
       },
@@ -127,6 +133,7 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("[Auth] signIn callback", { provider: account?.provider, email: user?.email });
       if (account?.provider === "google") {
         const googleProfile = profile as GoogleProfile | undefined;
         const email = normalizeEmail(googleProfile?.email);
@@ -148,12 +155,21 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (account?.provider === "credentials") {
-        return Boolean(user?.email);
+        const allow = Boolean(user?.email);
+        console.log("[Auth] signIn credentials", { allow });
+        return allow;
       }
 
+      console.log("[Auth] signIn denied");
       return false;
     },
     async jwt({ token, user, account, profile }) {
+      console.log("[Auth] jwt callback start", {
+        hasUser: !!user,
+        hasToken: !!token,
+        provider: account?.provider,
+        tokenEmail: token?.email
+      });
       if (user) {
         token.email = normalizeEmail(user.email) || token.email;
         token.name = user.name || token.name;
@@ -176,6 +192,7 @@ export const authOptions: NextAuthOptions = {
           : Date.now() + Number(account.expires_in || SESSION_MAX_AGE_SECONDS) * 1000;
         token.scope = account.scope || token.scope;
         token.error = undefined;
+        console.log("[Auth] jwt google path end", { email: token.email });
         return token;
       }
 
@@ -184,13 +201,16 @@ export const authOptions: NextAuthOptions = {
         token.accessTokenExpires &&
         Date.now() < Number(token.accessTokenExpires) - 60_000
       ) {
+        console.log("[Auth] jwt valid access token path end", { email: token.email });
         return token;
       }
 
       if (token.refreshToken) {
+        console.log("[Auth] jwt refresh path start", { email: token.email });
         return refreshGoogleAccessToken(token);
       }
 
+      console.log("[Auth] jwt callback fallback end", { email: token.email, error: token.error });
       return {
         ...token,
         accessToken: undefined,
@@ -199,6 +219,11 @@ export const authOptions: NextAuthOptions = {
       };
     },
     async session({ session, token }) {
+      console.log("[Auth] session callback start", {
+        hasSession: !!session,
+        sessionEmail: session?.user?.email,
+        tokenEmail: token?.email
+      });
       // Never expose OAuth access/refresh tokens to React/browser code.
       session.accessTokenError = token.error;
       session.googleScope = token.scope;
@@ -216,6 +241,7 @@ export const authOptions: NextAuthOptions = {
         if (token.picture) session.user.image = String(token.picture);
       }
 
+      console.log("[Auth] session callback end", { finalEmail: session?.user?.email });
       return session;
     },
   },

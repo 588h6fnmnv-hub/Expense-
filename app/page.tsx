@@ -2848,16 +2848,20 @@ export default function Home() {
         ? await createUserWithEmailAndPassword(firebaseAuth, emailDraft, passwordDraft)
         : await signInWithEmailAndPassword(firebaseAuth, emailDraft, passwordDraft);
 
+      console.log("[Auth] Firebase auth success", { email: userCredential.user.email });
       const idToken = await userCredential.user.getIdToken();
+      console.log("[Auth] nextAuthSignIn start");
       const result = await nextAuthSignIn("credentials", {
         idToken,
         redirect: false,
       });
+      console.log("[Auth] nextAuthSignIn result", { error: result?.error, ok: result?.ok, url: result?.url });
 
       if (result?.error) {
         setLoginError("Failed to establish session. Please try again.");
       }
     } catch (error: unknown) {
+      console.error("[Auth] handleEmailAuth error:", error);
       let message = "Authentication failed.";
       if (error instanceof FirebaseError) {
         if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
