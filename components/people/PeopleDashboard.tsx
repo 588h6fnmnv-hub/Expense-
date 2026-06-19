@@ -7,8 +7,6 @@ type PeopleDashboardProps = {
   customers: Customer[];
   suppliers: Supplier[];
   theme: ThemeMode;
-  onCreateCustomer: (customer: Omit<Customer, "id">) => void;
-  onCreateSupplier: (supplier: Omit<Supplier, "id">) => void;
 };
 
 export default function PeopleDashboard({

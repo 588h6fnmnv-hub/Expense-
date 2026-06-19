@@ -1975,8 +1975,8 @@ export default function Home() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [dailyReports, setDailyReports] = useState<DailyWorkReport[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [customers] = useState<Customer[]>([]);
+  const [suppliers] = useState<Supplier[]>([]);
   const [invoices] = useState<Invoice[]>([]);
   const [supplierBills] = useState<SupplierBill[]>([]);
   const [attendance] = useState<Attendance[]>([]);
@@ -3024,7 +3024,7 @@ export default function Home() {
           : "No new Gmail transactions found",
         "success"
       );
-    } catch (error) {
+    } catch (error: unknown) {
       showToast(
         error instanceof Error ? error.message : "Gmail import failed.",
         "error"
@@ -4128,8 +4128,6 @@ export default function Home() {
                 customers={customers}
                 suppliers={suppliers}
                 theme={theme}
-                onCreateCustomer={(c) => setCustomers(curr => [...curr, { ...c, id: uid() }])}
-                onCreateSupplier={(s) => setSuppliers(curr => [...curr, { ...s, id: uid() }])}
               />
 
               <WorkersTab
