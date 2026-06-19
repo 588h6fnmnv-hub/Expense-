@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession } from "next-auth/react";
+import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -2856,15 +2857,19 @@ export default function Home() {
       if (result?.error) {
         setLoginError("Failed to establish session. Please try again.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       let message = "Authentication failed.";
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-        message = "Invalid email or password.";
-      } else if (error.code === "auth/email-already-in-use") {
-        message = "Email is already in use.";
-      } else if (error.code === "auth/weak-password") {
-        message = "Password should be at least 6 characters.";
-      } else if (error.message) {
+      if (error instanceof FirebaseError) {
+        if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+          message = "Invalid email or password.";
+        } else if (error.code === "auth/email-already-in-use") {
+          message = "Email is already in use.";
+        } else if (error.code === "auth/weak-password") {
+          message = "Password should be at least 6 characters.";
+        } else {
+          message = error.message;
+        }
+      } else if (error instanceof Error) {
         message = error.message;
       }
       setLoginError(message);

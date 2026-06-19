@@ -15,8 +15,6 @@ export default function PeopleDashboard({
   customers,
   suppliers,
   theme,
-  onCreateCustomer,
-  onCreateSupplier,
 }: PeopleDashboardProps) {
   const [activeTab, setActiveTab] = useState<"Customers" | "Suppliers">("Customers");
 

@@ -1,6 +1,5 @@
 import {
   JournalEntry,
-  JournalEntryLine,
   LedgerEntry,
   Account
 } from "@/lib/types";
