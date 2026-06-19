@@ -7,16 +7,12 @@ type PeopleDashboardProps = {
   customers: Customer[];
   suppliers: Supplier[];
   theme: ThemeMode;
-  onCreateCustomer: (customer: Omit<Customer, "id">) => void;
-  onCreateSupplier: (supplier: Omit<Supplier, "id">) => void;
 };
 
 export default function PeopleDashboard({
   customers,
   suppliers,
   theme,
-  onCreateCustomer,
-  onCreateSupplier,
 }: PeopleDashboardProps) {
   const [activeTab, setActiveTab] = useState<"Customers" | "Suppliers">("Customers");
 
