@@ -1,7 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { logSecurityEvent, normalizeEmail } from "@/lib/security";
+import { getAdminAuth } from "@/lib/firebase-admin";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8; // 8 hours
 const SESSION_UPDATE_AGE_SECONDS = 60 * 15; // rotate/refresh every 15 minutes
@@ -75,6 +77,30 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    CredentialsProvider({
+      name: "Firebase",
+      credentials: {
+        idToken: { label: "ID Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.idToken) return null;
+
+        const adminAuth = getAdminAuth();
+        if (!adminAuth) return null;
+
+        try {
+          const decodedToken = await adminAuth.verifyIdToken(credentials.idToken);
+          return {
+            id: decodedToken.uid,
+            email: normalizeEmail(decodedToken.email),
+            name: (decodedToken.name as string) || decodedToken.email,
+            image: (decodedToken.picture as string) || undefined,
+          };
+        } catch {
+          return null;
+        }
+      },
+    }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -100,27 +126,41 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
-    async signIn({ profile }) {
-      const googleProfile = profile as GoogleProfile | undefined;
-      const email = normalizeEmail(googleProfile?.email);
-      const verified = googleProfile?.email_verified === true;
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        const googleProfile = profile as GoogleProfile | undefined;
+        const email = normalizeEmail(googleProfile?.email);
+        const verified = googleProfile?.email_verified === true;
 
-      await logSecurityEvent({
-        type: verified ? "auth_attempt" : "auth_failure",
-        userEmail: email,
-        metadata: { provider: "google", verified },
-      });
+        await logSecurityEvent({
+          type: verified ? "auth_attempt" : "auth_failure",
+          userEmail: email,
+          metadata: { provider: "google", verified },
+        });
 
-      // OAuth users must have a Google-verified email. This is the equivalent
-      // of email verification for this app because password auth is not used.
-      console.log("PROFILE", profile);
-      console.log("EMAIL", email);
-      console.log("VERIFIED", verified);
+        // OAuth users must have a Google-verified email. This is the equivalent
+        // of email verification for this app because password auth is not used.
+        console.log("PROFILE", profile);
+        console.log("EMAIL", email);
+        console.log("VERIFIED", verified);
 
-      return Boolean(email && verified);
+        return Boolean(email && verified);
+      }
+
+      if (account?.provider === "credentials") {
+        return Boolean(user?.email);
+      }
+
+      return false;
     },
-    async jwt({ token, account, profile }) {
-      if (profile) {
+    async jwt({ token, user, account, profile }) {
+      if (user) {
+        token.email = normalizeEmail(user.email) || token.email;
+        token.name = user.name || token.name;
+        token.picture = user.image || token.picture;
+      }
+
+      if (profile && account?.provider === "google") {
         const googleProfile = profile as GoogleProfile;
         token.email = normalizeEmail(googleProfile.email) || token.email;
         token.emailVerified = googleProfile.email_verified === true;
@@ -128,7 +168,7 @@ export const authOptions: NextAuthOptions = {
         token.picture = googleProfile.picture || token.picture;
       }
 
-      if (account) {
+      if (account && account.provider === "google") {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token || token.refreshToken;
         token.accessTokenExpires = account.expires_at

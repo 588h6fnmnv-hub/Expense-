@@ -1,4 +1,5 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -30,4 +31,27 @@ export const getAdminDb = () => {
 
   adminDb = getFirestore(app);
   return adminDb;
+};
+
+let adminAuth: ReturnType<typeof getAuth> | null = null;
+
+export const getAdminAuth = () => {
+  if (adminAuth) return adminAuth;
+
+  if (!isFirebaseAdminConfigured) {
+    return null;
+  }
+
+  const app =
+    getApps()[0] ||
+    initializeApp({
+      credential: cert({
+        projectId: projectId!,
+        clientEmail: clientEmail!,
+        privateKey: privateKey!,
+      }),
+    });
+
+  adminAuth = getAuth(app);
+  return adminAuth;
 };

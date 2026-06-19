@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -33,6 +34,8 @@ const firestoreDatabaseId = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID || "de
 export const firebaseDb = firebaseApp
   ? getFirestore(firebaseApp, firestoreDatabaseId)
   : null;
+
+export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
 
 const walletDocId = (email: string) => encodeURIComponent(email.toLowerCase());
 
