@@ -101,8 +101,9 @@ export const authOptions: NextAuthOptions = {
             name: (decodedToken.name as string) || decodedToken.email,
             image: (decodedToken.picture as string) || undefined,
           };
-        } catch (error: any) {
-          console.error("[Auth] authorize error:", error.message || error);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error("[Auth] authorize error:", message);
           return null;
         }
       },
