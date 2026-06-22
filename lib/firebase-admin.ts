@@ -10,6 +10,14 @@ export const isFirebaseAdminConfigured = Boolean(
   projectId && clientEmail && privateKey
 );
 
+if (!isFirebaseAdminConfigured) {
+  console.error("[FirebaseAdmin] Missing config:", {
+    projectId: !!projectId,
+    clientEmail: !!clientEmail,
+    privateKey: !!privateKey,
+  });
+}
+
 let adminDb: ReturnType<typeof getFirestore> | null = null;
 
 export const getAdminDb = () => {

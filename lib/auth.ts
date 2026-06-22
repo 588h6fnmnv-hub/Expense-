@@ -16,6 +16,12 @@ type GoogleProfile = {
   sub?: string;
 };
 
+console.log("[Auth] lib/auth init", {
+  hasSecret: !!process.env.NEXTAUTH_SECRET,
+  hasUrl: !!process.env.NEXTAUTH_URL,
+  env: process.env.NODE_ENV
+});
+
 const refreshGoogleAccessToken = async (token: JWT): Promise<JWT> => {
   try {
     const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -84,7 +90,10 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         console.log("[Auth] authorize start", { hasIdToken: !!credentials?.idToken });
-        if (!credentials?.idToken) return null;
+        if (!credentials?.idToken) {
+          console.warn("[Auth] authorize missing idToken");
+          return null;
+        }
 
         const adminAuth = getAdminAuth();
         if (!adminAuth) {
@@ -93,17 +102,20 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          console.log("[Auth] authorize verifying token...");
           const decodedToken = await adminAuth.verifyIdToken(credentials.idToken);
           console.log("[Auth] authorize success", { uid: decodedToken.uid, email: decodedToken.email });
-          return {
+          const user = {
             id: decodedToken.uid,
             email: normalizeEmail(decodedToken.email),
             name: (decodedToken.name as string) || decodedToken.email,
             image: (decodedToken.picture as string) || undefined,
           };
+          console.log("[Auth] authorize returning user object", { email: user.email });
+          return user;
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : String(error);
-          console.error("[Auth] authorize error:", message);
+          console.error("[Auth] authorize error during verification:", message);
           return null;
         }
       },
@@ -147,7 +159,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         // OAuth users must have a Google-verified email. This is the equivalent
-        // of email verification for this app because password auth is not used.
+        // of email verification for this app.
         console.log("PROFILE", profile);
         console.log("EMAIL", email);
         console.log("VERIFIED", verified);

@@ -2858,6 +2858,7 @@ export default function Home() {
       console.log("[Auth] nextAuthSignIn result", { error: result?.error, ok: result?.ok, url: result?.url });
 
       if (result?.error) {
+        console.error("[Auth] nextAuthSignIn error result:", result.error);
         setLoginError("Failed to establish session. Please try again.");
       }
     } catch (error: unknown) {
