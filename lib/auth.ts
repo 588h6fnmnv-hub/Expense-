@@ -191,6 +191,12 @@ export const authOptions: NextAuthOptions = {
         return refreshGoogleAccessToken(token);
       }
 
+      // If this is a credentials provider or another provider that doesn't use
+      // Google access/refresh tokens, return the token as-is.
+      if (account?.provider !== "google" && !token.refreshToken) {
+        return token;
+      }
+
       return {
         ...token,
         accessToken: undefined,
