@@ -1,0 +1,22 @@
+
+> expense-tracker-web@1.0.0 dev
+> next dev -p 3004
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3004
+   - Network:      http://192.168.0.2:3004
+
+ ✓ Starting...
+ ✓ Ready in 1983ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 2s (158 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 15.3s (1334 modules)
+ GET / 200 in 17729ms
+ GET / 200 in 128ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 4s (1585 modules)
+[next-auth][warn][NEXTAUTH_URL]
+https://next-auth.js.org/warnings#nextauth_url
+[next-auth][warn][NO_SECRET]
+https://next-auth.js.org/warnings#no_secret
