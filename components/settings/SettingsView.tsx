@@ -34,12 +34,9 @@ type SettingsViewProps = {
   projects: ProjectSite[];
   activityLog: ActivityLogItem[];
   dataHealthWarnings: string[];
-  isImportingEmail: boolean;
   canExportCloudBackup: boolean;
   cardSourceLabel: (card: Pick<CardItem, "name" | "number">) => string;
   onCardDraftChange: (patch: Partial<CardDraft>) => void;
-  onConnectGmailAccess: () => void;
-  onImportEmailTransactions: () => void;
   onSaveCardDraft: () => void;
   onUpdateCard: (cardId: string, patch: Partial<CardItem>) => void;
   onPlanChange: (plan: PlanType) => void;
@@ -74,12 +71,9 @@ export default function SettingsView({
   projects,
   activityLog,
   dataHealthWarnings,
-  isImportingEmail,
   canExportCloudBackup,
   cardSourceLabel,
   onCardDraftChange,
-  onConnectGmailAccess,
-  onImportEmailTransactions,
   onSaveCardDraft,
   onUpdateCard,
   onPlanChange,
@@ -100,29 +94,6 @@ export default function SettingsView({
         </p>
       </div>
 
-      <div className="liquid-surface text-neutral-950 rounded-[28px] p-5">
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">
-          Gmail
-        </p>
-        <h2 className="mt-2 text-2xl font-black">Transaction Import</h2>
-        <div className="mt-4 grid gap-2">
-          <button
-            type="button"
-            onClick={onConnectGmailAccess}
-            className="rounded-2xl bg-black px-4 py-3 text-sm font-black text-white active:scale-[0.98] dark:bg-white dark:text-black"
-          >
-            Connect Gmail Access
-          </button>
-          <button
-            type="button"
-            disabled={isImportingEmail}
-            onClick={onImportEmailTransactions}
-            className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-black active:scale-[0.98] disabled:opacity-60"
-          >
-            {isImportingEmail ? "Importing..." : "Import Gmail Transactions"}
-          </button>
-        </div>
-      </div>
 
       <div className="liquid-surface text-neutral-950 rounded-[28px] p-5">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">
