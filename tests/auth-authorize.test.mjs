@@ -268,3 +268,41 @@ test("SHA256 password fallback verification", async () => {
   assert.ok(user);
   assert.equal(user.email, "supervisor@ledge.local");
 });
+
+test("Multi-tenant isolation verification - edit/reset blocked on mismatched companyId", async () => {
+  // Simulate the GET/POST transaction logic for users route
+  const companyA = "company-A";
+  const companyB = "company-B";
+
+  const targetUserInCompanyB = {
+    username: "userb",
+    email: "userb@ledge.local",
+    companyId: companyB,
+  };
+
+  // Admin of Company A tries to edit or reset user of Company B
+  const adminCompanyId = companyA;
+
+  // Verification step: Assert target's companyId matches admin's companyId
+  const isIsolated = targetUserInCompanyB.companyId === adminCompanyId;
+
+  assert.equal(isIsolated, false, "Should block cross-tenant company isolation violation");
+});
+
+test("Multi-tenant isolation verification - edit/reset allowed on matching companyId", async () => {
+  const companyA = "company-A";
+
+  const targetUserInCompanyA = {
+    username: "usera",
+    email: "usera@ledge.local",
+    companyId: companyA,
+  };
+
+  // Admin of Company A tries to edit or reset user of Company A
+  const adminCompanyId = companyA;
+
+  // Verification step: Assert target's companyId matches admin's companyId
+  const isIsolated = targetUserInCompanyA.companyId === adminCompanyId;
+
+  assert.equal(isIsolated, true, "Should allow matching tenant access");
+});

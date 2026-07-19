@@ -1,10 +1,7 @@
 "use client";
 
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession } from "next-auth/react";
-import { FirebaseError } from "firebase/app";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase";
@@ -1951,10 +1948,15 @@ const storageStatusText: Record<StorageStatus, string> = {
 export default function Home() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [loginMode, setLoginMode] = useState<"login" | "register">("login");
   const [emailDraft, setEmailDraft] = useState("");
   const [passwordDraft, setPasswordDraft] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  const [mustChangePasswordForce, setMustChangePasswordForce] = useState(false);
+  const [newPasswordDraft, setNewPasswordDraft] = useState("");
+  const [confirmPasswordDraft, setConfirmPasswordDraft] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState("");
   const [inviteCodeDraft, setInviteCodeDraft] = useState("");
   const [savedUser, setSavedUser] = useState("");
   const [employeeSession, setEmployeeSession] = useState<EmployeeSession | null>(null);
@@ -2078,6 +2080,67 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
+
+  useEffect(() => {
+    if (session?.user?.mustChangePassword) {
+      setMustChangePasswordForce(true);
+    } else {
+      setMustChangePasswordForce(false);
+    }
+  }, [session?.user?.mustChangePassword]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPasswordDraft.length < 6) {
+      setChangePasswordError("Password must be at least 6 characters.");
+      return;
+    }
+    if (newPasswordDraft !== confirmPasswordDraft) {
+      setChangePasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setChangePasswordError("");
+
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: newPasswordDraft }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Password updated successfully! Please sign in with your new password.", "success");
+        setMustChangePasswordForce(false);
+        if (firebaseAuth) {
+          await firebaseSignOut(firebaseAuth).catch(() => null);
+        }
+        await nextAuthSignOut({ redirect: false });
+        localStorage.removeItem("username");
+        localStorage.removeItem("authMode");
+        writeEmployeeSession(null);
+        localStorage.removeItem("profileName");
+        setSavedUser("");
+        setEmployeeSession(null);
+        setProfileName("");
+        setNameDraft("");
+        setAcceptedTerms(false);
+        setLoginError("");
+        setShowWelcome(false);
+        setTab("Home");
+        setStorageStatus("local");
+        setWalletReady(false);
+        applyWalletData(emptyWalletData());
+      } else {
+        setChangePasswordError(data.error || "Failed to update password.");
+      }
+    } catch {
+      setChangePasswordError("Network error. Try again.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     setRegisteredUsers(
@@ -2618,7 +2681,7 @@ export default function Home() {
       },
     ];
   }, [visibleMaterials, visibleProjects, visibleTransactions, visibleWorkers]);
-  const isAdmin = DEMO_ADMIN_ENABLED && savedUser === TEMP_DOMAIN_USERNAME;
+  const isAdmin = (DEMO_ADMIN_ENABLED && savedUser === TEMP_DOMAIN_USERNAME) || session?.user?.role === "super-admin";
   const navItems: BottomNavItem[] = (() => {
     if (accessContext.role === "worker") {
       return ["People"];
@@ -2817,11 +2880,7 @@ export default function Home() {
       return;
     }
     if (!emailDraft || !passwordDraft) {
-      setLoginError("Enter email and password.");
-      return;
-    }
-    if (!firebaseAuth) {
-      setLoginError("Firebase is not configured.");
+      setLoginError("Enter username and password.");
       return;
     }
 
@@ -2829,35 +2888,17 @@ export default function Home() {
     setLoginError("");
 
     try {
-      const userCredential = loginMode === "register"
-        ? await createUserWithEmailAndPassword(firebaseAuth, emailDraft, passwordDraft)
-        : await signInWithEmailAndPassword(firebaseAuth, emailDraft, passwordDraft);
-
-      const idToken = await userCredential.user.getIdToken();
       const result = await nextAuthSignIn("credentials", {
-        idToken,
+        username: emailDraft,
+        password: passwordDraft,
         redirect: false,
       });
 
       if (result?.error) {
-        setLoginError("Failed to establish session. Please try again.");
+        setLoginError(result.error === "CredentialsSignin" ? "Invalid username or password." : result.error);
       }
     } catch (error: unknown) {
-      let message = "Authentication failed.";
-      if (error instanceof FirebaseError) {
-        if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
-          message = "Invalid email or password.";
-        } else if (error.code === "auth/email-already-in-use") {
-          message = "Email is already in use.";
-        } else if (error.code === "auth/weak-password") {
-          message = "Password should be at least 6 characters.";
-        } else {
-          message = error.message;
-        }
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
-      setLoginError(message);
+      setLoginError(error instanceof Error ? error.message : "Authentication failed.");
     } finally {
       setIsAuthenticating(false);
     }
@@ -3646,6 +3687,78 @@ export default function Home() {
     );
   };
 
+  if (mustChangePasswordForce && savedUser) {
+    return (
+      <div className="relative min-h-screen text-on-surface flex items-center justify-center p-6 bg-black overflow-x-hidden">
+        {/* Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="gradient-sphere -top-[200px] -left-[200px] opacity-40 animate-pulse" style={{ animationDuration: "8s" }} />
+          <div className="gradient-sphere top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
+          <div className="gradient-sphere -bottom-[300px] -right-[200px] opacity-30 animate-pulse" style={{ animationDuration: "12s" }} />
+        </div>
+
+        <main className="relative z-10 w-full max-w-[480px] flex flex-col items-center">
+          <div className="text-center mb-10 space-y-4">
+            <div className="w-16 h-16 bg-primary rounded-2xl mx-auto flex items-center justify-center shadow-2xl mb-6 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+              <span className="material-symbols-outlined text-background text-4xl leading-none">lock_reset</span>
+            </div>
+            <h1 className="font-display-lg text-4xl font-black text-primary tracking-tighter">
+              Change Password
+            </h1>
+            <p className="font-body-lg text-sm text-apple-silver max-w-[320px] mx-auto">
+              This is your first login or your password was reset. You must choose a new password (minimum 6 characters) before continuing.
+            </p>
+          </div>
+
+          <div className="glass-card w-full rounded-[2rem] p-6 md:p-8 flex flex-col gap-6">
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+              <input
+                type="password"
+                required
+                value={newPasswordDraft}
+                onChange={(e) => setNewPasswordDraft(e.target.value)}
+                placeholder="New Password (min 6 chars)"
+                className="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-primary text-sm font-semibold outline-none focus:border-white transition"
+                disabled={isChangingPassword}
+              />
+              <input
+                type="password"
+                required
+                value={confirmPasswordDraft}
+                onChange={(e) => setConfirmPasswordDraft(e.target.value)}
+                placeholder="Confirm New Password"
+                className="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-primary text-sm font-semibold outline-none focus:border-white transition"
+                disabled={isChangingPassword}
+              />
+
+              {changePasswordError && (
+                <p className="rounded-xl bg-danger-red/10 border border-danger-red/20 p-3 text-sm font-semibold text-danger-red text-center">
+                  {changePasswordError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="btn-hover-effect w-full h-14 bg-primary text-background rounded-xl font-bold flex items-center justify-center shadow-lg text-base disabled:opacity-50"
+              >
+                {isChangingPassword ? "Updating..." : "Change Password"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn-hover-effect w-full h-12 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl font-body-md text-sm text-primary flex items-center justify-center gap-2"
+              >
+                Sign Out / Cancel
+              </button>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!savedUser) {
     return (
       <div className="relative min-h-screen text-on-surface flex items-center justify-center p-6 bg-black overflow-x-hidden">
@@ -3681,10 +3794,10 @@ export default function Home() {
               <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <input
-                    type="email"
+                    type="text"
                     value={emailDraft}
                     onChange={(e) => setEmailDraft(e.target.value)}
-                    placeholder="Email address"
+                    placeholder="Username or Email"
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-primary text-sm font-semibold outline-none focus:border-white transition"
                     disabled={isAuthenticating}
                   />
@@ -3703,15 +3816,7 @@ export default function Home() {
                   disabled={isAuthenticating}
                   className="btn-hover-effect w-full h-14 bg-primary text-background rounded-xl flex items-center justify-center gap-3 font-bold shadow-lg text-base disabled:opacity-50"
                 >
-                  {isAuthenticating ? "Authenticating..." : loginMode === "login" ? "Sign In" : "Create Account"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLoginMode(loginMode === "login" ? "register" : "login")}
-                  className="text-xs text-primary font-bold hover:underline self-center"
-                >
-                  {loginMode === "login" ? "Need an account? Register" : "Already have an account? Sign In"}
+                  {isAuthenticating ? "Authenticating..." : "Sign In"}
                 </button>
               </form>
 

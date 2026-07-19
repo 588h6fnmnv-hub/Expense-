@@ -1,0 +1,10 @@
+
+> expense-tracker-web@1.0.0 start
+> next start -p 3004
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3004
+   - Network:      http://192.168.0.2:3004
+
+ ✓ Starting...
+ ✓ Ready in 461ms

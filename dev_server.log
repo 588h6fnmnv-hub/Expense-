@@ -7,16 +7,17 @@
    - Network:      http://192.168.0.2:3004
 
  ✓ Starting...
- ✓ Ready in 1983ms
+ ✓ Ready in 2s
  ○ Compiling /middleware ...
- ✓ Compiled /middleware in 2s (158 modules)
+ ✓ Compiled /middleware in 1052ms (158 modules)
  ○ Compiling / ...
- ✓ Compiled / in 15.3s (1334 modules)
- GET / 200 in 17729ms
- GET / 200 in 128ms
+ ✓ Compiled / in 13.6s (1336 modules)
+ GET / 200 in 15854ms
  ○ Compiling /api/auth/[...nextauth] ...
- ✓ Compiled /api/auth/[...nextauth] in 4s (1585 modules)
+ ✓ Compiled /api/auth/[...nextauth] in 5.1s (1587 modules)
 [next-auth][warn][NEXTAUTH_URL]
 https://next-auth.js.org/warnings#nextauth_url
 [next-auth][warn][NO_SECRET]
 https://next-auth.js.org/warnings#no_secret
+ ✓ Compiled in 6.6s (524 modules)
+ ✓ Compiled in 1392ms (524 modules)

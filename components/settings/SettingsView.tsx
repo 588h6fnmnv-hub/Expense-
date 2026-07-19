@@ -2,6 +2,7 @@
 
 import BackupRestore from "@/components/settings/BackupRestore";
 import PlanSystemPanel from "@/components/settings/PlanSystemPanel";
+import UserManagement from "./UserManagement";
 import type {
   CardItem,
   ActivityLogItem,
@@ -82,6 +83,13 @@ export default function SettingsView({
   onImportBackup,
   onExportCloudBackup,
 }: SettingsViewProps) {
+  const showUserManagement =
+    company &&
+    (company.role === "Owner" ||
+      company.role === "Admin" ||
+      (company.role as string).toLowerCase() === "owner" ||
+      (company.role as string).toLowerCase() === "admin");
+
   return (
     <div className="space-y-4">
       <div className="liquid-surface text-neutral-950 rounded-[28px] p-5">
@@ -94,6 +102,14 @@ export default function SettingsView({
         </p>
       </div>
 
+      {showUserManagement && (
+        <UserManagement
+          companyId={company.id}
+          projects={projects}
+          theme={wallet.theme}
+          onMessage={onMessage}
+        />
+      )}
 
       <div className="liquid-surface text-neutral-950 rounded-[28px] p-5">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">

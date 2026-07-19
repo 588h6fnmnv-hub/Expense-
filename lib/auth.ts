@@ -25,6 +25,9 @@ export const authOptions: NextAuthOptions = {
         let userId = "";
         let name = "";
         let picture = "";
+        let mustChangePassword = false;
+        let role = "";
+        let companyId = "";
 
         const db = getAdminDb();
 
@@ -37,6 +40,7 @@ export const authOptions: NextAuthOptions = {
             userId = decodedToken.uid;
             name = (decodedToken.name as string) || decodedToken.email || "";
             picture = (decodedToken.picture as string) || "";
+            role = "owner"; // Fallback role for Firebase Client Token if user doc not found yet
           } catch {
             return null;
           }
@@ -122,6 +126,9 @@ export const authOptions: NextAuthOptions = {
           userId = userDocId;
           name = (userDocData.name as string) || (userDocData.username as string) || email;
           picture = (userDocData.image as string) || "";
+          mustChangePassword = Boolean(userDocData.mustChangePassword);
+          role = (userDocData.role as string) || "worker";
+          companyId = (userDocData.companyId as string) || "";
         } else {
           return null;
         }
@@ -134,6 +141,10 @@ export const authOptions: NextAuthOptions = {
               if (uData?.active === false || uData?.status === "disabled" || uData?.status === "suspended" || uData?.suspended === true) {
                 throw new Error("Your account has been suspended.");
               }
+              // Refresh mustChangePassword, role, companyId if found in users collection
+              mustChangePassword = Boolean(uData?.mustChangePassword);
+              role = (uData?.role as string) || role;
+              companyId = (uData?.companyId as string) || companyId;
             }
           }
         } catch (error) {
@@ -147,6 +158,9 @@ export const authOptions: NextAuthOptions = {
           email: normalizeEmail(email),
           name: name || email,
           image: picture || undefined,
+          mustChangePassword,
+          role,
+          companyId,
         };
       },
     }),
@@ -186,6 +200,9 @@ export const authOptions: NextAuthOptions = {
         token.email = normalizeEmail(user.email) || token.email;
         token.name = user.name || token.name;
         token.picture = user.image || token.picture;
+        token.mustChangePassword = user.mustChangePassword;
+        token.role = user.role;
+        token.companyId = user.companyId;
       }
       return token;
     },
@@ -201,6 +218,9 @@ export const authOptions: NextAuthOptions = {
         if (token.name) session.user.name = String(token.name);
         if (token.picture) session.user.image = String(token.picture);
       }
+      session.user.mustChangePassword = token.mustChangePassword;
+      session.user.role = token.role;
+      session.user.companyId = token.companyId;
 
       return session;
     },
